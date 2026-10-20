@@ -1,8 +1,9 @@
 {
   "name": "fluxo",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Agentes de leitura, escrita, pesquisa e revisão, gate único de pré-commit e coordenação de frentes em sessões de fundo. Instala e já funciona.",
   "author": {
     "name": "Felipe Diniz"
-  }
+  },
+  "license": "MIT"
 }

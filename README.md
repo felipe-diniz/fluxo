@@ -19,6 +19,8 @@ Sem método, uma sessão longa do Claude Code costuma cair em problemas como est
 | Várias frentes grandes na mesma sessão se atropelam, e o contexto vira uma mistura. | A skill `fluxo:coordenar-sessoes` abre uma sessão de fundo por frente, com prompt montado, fila, janela de recursos e modo de commit. |
 | A compactação esquece aprovações e o estado do gate. | As regras dizem o que a compactação tem de preservar: o pedido nas palavras do usuário, as aprovações literais, os arquivos, os comandos com resultado e o estado do gate. |
 
+O estilo `fluxo:direto` corta o texto de resposta, que é o token mais caro (saída), e evita a ida e volta de "posso seguir?" no rotineiro, sem tirar a pergunta onde ela importa.
+
 O resultado é menos token gasto no contexto caro, revisão que não se repete e um padrão de entrega igual em todo projeto.
 
 ## O que vem
@@ -32,6 +34,7 @@ O resultado é menos token gasto no contexto caro, revisão que não se repete e
 | Hook | gate | Recusa a chamada ao gate sem `Pedido:`, `Escopo:` e `Verificado:`, ou com `model`/`effort` de override; pede confirmação a partir da 2ª passada na sessão. |
 | Hook | guard de Bash | Só age dentro do `fluxo:critical-review`: o gate lê e mede, não muda estado. |
 | Hook | regras | No início da sessão e depois de cada compactação, põe no contexto as regras de roteamento, de risco crítico, do gate e da compactação ([regras.md](plugins/fluxo/regras.md)). |
+| Estilo de resposta | `fluxo:direto` | Proativo fora do risco crítico e da regra de negócio; começa pelo resultado, sem preâmbulo nem drama; decisão do usuário vira pergunta com a opção recomendada. Entra sozinho com o plugin ([direto.md](plugins/fluxo/output-styles/direto.md)). |
 | Skill | `/fluxo:coordenar-sessoes` | Coordenação de frentes em sessões `claude --bg`. |
 | Comando | `/fluxo:migrar` | Remove uma instalação manual antiga do fluxo (veja abaixo). |
 
@@ -165,6 +168,7 @@ O plugin não escreve nos seus arquivos. Só o `/fluxo:migrar` escreve, e ele de
 
 - O `Explore` embutido do Claude Code continua existindo: agente de plugin ganha prefixo e não substitui o embutido. As regras mandam usar o `fluxo:explore`.
 - As regras entram por hook no contexto da sessão principal. Os subagentes têm o próprio prompt e não recebem essas regras; eles leem o `CLAUDE.md` do projeto, menos o `explore` e o `research`.
+- O estilo `fluxo:direto` vence o `outputStyle` do usuário enquanto o plugin estiver habilitado (`force-for-plugin`). Ele vale na sessão principal; os subagentes têm o próprio prompt.
 - O `regras.md` tem de caber em 10.000 caracteres, o limite de saída de hook.
 - Agente de plugin ignora `hooks:` no frontmatter. Por isso o guard de Bash do gate é um hook do plugin que filtra pelo `agent_type` do payload.
 
@@ -179,7 +183,12 @@ plugins/fluxo/
   scripts/                          os hooks e o migrar, em Python sem dependência
   regras.md                         o que vai ao contexto no início da sessão
   skills/coordenar-sessoes/         skill, modelos e references
+  output-styles/direto.md           estilo de resposta
   commands/migrar.md                /fluxo:migrar
 ```
 
 Para mudar algo: edite em `plugins/fluxo/`, suba o `version` no `plugin.json` e faça o push. O self-test do guard roda com `python3 plugins/fluxo/scripts/review-bash-guard.py --self-test`.
+
+## Licença
+
+[MIT](LICENSE).
