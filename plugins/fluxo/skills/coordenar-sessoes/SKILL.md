@@ -37,7 +37,7 @@ caminhos literais nos comandos seguintes. Nada aqui nomeia projeto; nada no prom
 | Frente ou fase com commit próprio, horas de trabalho, várias camadas | **sessão `--bg`** | contexto, gate e commit próprios; não engorda a coordenadora |
 | Leitura ampla, mapa de código, "quem chama" | `fluxo:explore` (subagente) | a coordenadora só precisa da síntese |
 | Pesquisa web | `fluxo:research` (subagente) | idem |
-| Conserto curto (≲ 5 arquivos, um domínio, sem fase de PRD), doc, memória, ajuste da coordenação | **direto na coordenadora**, com o gate no fim se mudar comportamento | uma sessão nova custa a base de contexto, o prompt, as skills e o gate; para pouca coisa é mais caro e mais lento |
+| Conserto curto (≲ 5 arquivos, um domínio, sem fase de PRD), doc, memória, ajuste da coordenação | **direto na coordenadora**, com o gate no fim se tocar risco crítico | uma sessão nova custa a base de contexto, o prompt, as skills e o gate; para pouca coisa é mais caro e mais lento |
 
 Subagente (ferramenta Agent) morre com a resposta, divide o contexto de quem o chamou e não tem gate próprio (o
 `fluxo:critical-review` é um por sessão): frente nunca vai a subagente. Agent teams (experimental) não isola worktree, não
@@ -155,7 +155,7 @@ A coordenadora concede e anota no `janela.md`.
 - **O push é da coordenadora, com o sim do dono**, depois de `git show --stat <sha>` contra o relatório, pelo caminho que
   o perfil descreve (de onde empurrar, hook, remoto). Nunca `--no-verify` sem a palavra do dono. PR, CI, merge e deploy:
   o que o perfil disser; merge e deploy são do dono.
-- **Sessão de manutenção** (só `.claude/`, docs, memória e testes, sem comportamento): não passa pelo gate.
+- **Sem risco crítico tocado** (manutenção, `.claude/`, docs, memória, testes, ou comportamento comum): não passa pelo gate.
 
 ## 7. A prova pelo risco
 

@@ -13,7 +13,7 @@ Sem método, uma sessão longa do Claude Code costuma cair em problemas como est
 | A sessão principal lê dezenas de arquivos e o contexto incha: cada turno fica mais caro e a compactação chega mais cedo. | A leitura ampla vai ao `fluxo:explore` (haiku, só leitura), que devolve só a síntese com `arquivo:linha`. |
 | Código isolável e de especificação fechada é escrito no contexto principal. | Vai ao `fluxo:implement` (sonnet), com briefing fechado e teste focado. A principal confere o diff. |
 | A pesquisa na web despeja páginas inteiras no contexto. | Vai ao `fluxo:research` (sonnet), que devolve a síntese com as fontes. |
-| A revisão roda várias vezes por sessão, sem escopo, e refaz o que já foi verificado. | Um gate só, o `fluxo:critical-review`: uma vez, no fim, com testes verdes, sobre o escopo declarado. Um hook recusa a chamada sem briefing e pede confirmação a partir da segunda. |
+| A revisão roda várias vezes por sessão, em tudo, e refaz o que já foi verificado. | Um gate só, o `fluxo:critical-review`, e só quando a sessão mudou uma invariante de risco crítico: uma vez, no fim, com testes verdes, só sobre os hunks críticos e os irmãos deles. Doc, i18n e o resto sem risco ficam fora. Um hook recusa a chamada sem briefing e pede confirmação a partir da segunda. |
 | O revisor "conserta" coisas, roda a suíte inteira ou faz commit no meio da revisão. | Dentro do gate, um guard de Bash recusa git que muda a árvore, escrita fora do temporário, suíte inteira, build, servidor, migration, instalação de pacote e rede externa. |
 | O agente mexe em dinheiro, auth ou dado de outro cliente com a mesma leveza de um CSS. | Risco crítico é contrato do projeto: o `implement` não toca nesses domínios e o gate revisa a fundo o que muda uma invariante deles. |
 | Várias frentes grandes na mesma sessão se atropelam, e o contexto vira uma mistura. | A skill `fluxo:coordenar-sessoes` abre uma sessão de fundo por frente, com prompt montado, fila, janela de recursos e modo de commit. |
@@ -31,7 +31,7 @@ O resultado é menos token gasto no contexto caro, revisão que não se repete e
 | Agente | `fluxo:implement` | Escrita isolável e não crítica: arquivo novo, teste no padrão, doc, refactor mecânico. |
 | Agente | `fluxo:research` | Pesquisa web: providers, docs externas, preços, limites, regras. |
 | Agente | `fluxo:critical-review` | Gate de pré-commit: QA de entrega, revisão de risco crítico, medição, testes, docs e memória. Devolve LIBERADO ou BARRADO. |
-| Hook | gate | Recusa a chamada ao gate sem `Pedido:`, `Escopo:` e `Verificado:`, ou com `model`/`effort` de override; pede confirmação a partir da 2ª passada na sessão. |
+| Hook | gate | Recusa a chamada ao gate sem `Pedido:`, `Escopo:`, `Verificado:` e `Risco:`, ou com `model`/`effort` de override; pede confirmação a partir da 2ª passada na sessão. |
 | Hook | guard de Bash | Só age dentro do `fluxo:critical-review`: o gate lê e mede, não muda estado. |
 | Hook | regras | No início da sessão e depois de cada compactação, põe no contexto as regras de roteamento, de risco crítico, do gate e da compactação ([regras.md](plugins/fluxo/regras.md)). |
 | Estilo de resposta | `fluxo:direto` | Proativo fora do risco crítico e da regra de negócio; começa pelo resultado, sem preâmbulo nem drama; decisão do usuário vira pergunta com a opção recomendada. Entra sozinho com o plugin ([direto.md](plugins/fluxo/output-styles/direto.md)). |
@@ -75,18 +75,18 @@ Você pede o trabalho como sempre. As regras do plugin já dizem à sessão como
 1. **Entender:** se precisar abrir o terceiro arquivo, a sessão manda um ou mais `fluxo:explore` em paralelo, cada um com uma pergunta.
 2. **Fazer:** desenho, decisão e tudo o que toca risco crítico ficam na sessão principal. O isolável vai ao `fluxo:implement`, com os arquivos que ele pode tocar e o teste que tem de passar.
 3. **Provar:** a sessão roda os testes do que mudou, o lint e o typecheck.
-4. **Revisar uma vez:** só com tudo verde, a sessão chama o `fluxo:critical-review` com o briefing:
+4. **Revisar uma vez, só se tocou risco crítico:** com tudo verde, a sessão chama o `fluxo:critical-review` sobre os hunks que mudam a invariante e os irmãos deles (quem chama, quem consome, os testes desse caminho), com o briefing:
 
    ```
    Pedido: <o que você pediu, nas suas palavras, e o doc de origem>
-   Escopo: <arquivos e commits da sessão; o que na árvore não é da sessão>
+   Escopo: <o recorte crítico; o que da sessão fica fora por não ter risco; o que na árvore não é da sessão>
    Verificado: <o que já rodou e o resultado; ambiente de pé ou não>
-   Risco: <opcional: domínios críticos tocados e invariantes em jogo>
+   Risco: <domínios críticos tocados e invariantes em jogo>
    ```
 
 5. **Fechar:** a sessão corrige o que o gate apontou, cobrindo com teste, e faz o commit. Uma nova passada só acontece quando o próprio relatório marca `re-revisão: sim`.
 
-O gate não entra em desenho, plano, investigação de bug nem em sessão que só mexeu em doc ou teste.
+Sem domínio crítico tocado não há gate: a sessão fecha no passo 3, com a própria conferência pedido × feito. O gate também não entra em desenho, plano nem investigação de bug.
 
 ### Ensine o risco crítico do seu projeto
 

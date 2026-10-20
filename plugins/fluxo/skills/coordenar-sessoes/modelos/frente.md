@@ -20,4 +20,4 @@ Portão (o que você devolve medido, nunca afirmado): <1) suítes tocadas com a 
 
 Docs: <o contrato com o "Feito em <data>" e as pendências; a skill da camada se a regra mudou; a reference de risco se uma invariante mudou; i18n nos idiomas do projeto> no commit da entrega ou num `docs(...)` logo atrás; memória em commit próprio.
 
-Fecho: portão verde; UM gate `fluxo:critical-review` no fim sobre o diff da sessão; conserte o que vier; <commite pelas regras do rodapé | NÃO commite: o dono ainda não autorizou>; relatório final à coordenadora.
+Fecho: portão verde; UM gate `fluxo:critical-review` no fim, só se tocou risco crítico, sobre os hunks críticos e os irmãos; conserte o que vier; <commite pelas regras do rodapé | NÃO commite: o dono ainda não autorizou>; relatório final à coordenadora.

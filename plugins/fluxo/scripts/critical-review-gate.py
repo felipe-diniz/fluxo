@@ -4,7 +4,8 @@
 0. Effort: o `max` é só do gate, pelo frontmatter dele. Recusa (deny) a chamada ao gate que passe `model` ou
    `effort` (o parâmetro da chamada vence o frontmatter) e pede confirmação do usuário para qualquer outro
    subagent chamado com `effort: max`.
-1. Recusa (deny) a chamada sem o briefing mínimo: linhas `Pedido:`, `Escopo:` e `Verificado:`.
+1. Recusa (deny) a chamada sem o briefing mínimo: linhas `Pedido:`, `Escopo:`, `Verificado:` e `Risco:`.
+   O gate é só de risco crítico: sem `Risco:` não há o que ele revisar.
    Sem escopo explícito o gate rederiva tudo da árvore inteira, que costuma ter trabalho de outras
    sessões, e refaz o que já foi verificado: é a maior fonte de custo da revisão. A recusa volta ao
    modelo com o molde do briefing, sem envolver o usuário.
@@ -31,12 +32,13 @@ REQUIRED = (
     ("Pedido", ("pedido", "request")),
     ("Escopo", ("escopo", "scope")),
     ("Verificado", ("verificado", "verified")),
+    ("Risco", ("risco", "risk")),
 )
 TEMPLATE = (
     "Pedido: <o que o usuário pediu, nas palavras dele, e o doc de origem>\n"
-    "Escopo: <arquivos e/ou commits da sessão, untracked incluídos; o que na árvore NÃO é da sessão>\n"
+    "Escopo: <hunks que mudam invariante crítica e os irmãos (quem chama, quem consome, os testes); o que fica fora>\n"
     "Verificado: <o que já rodou e o resultado; ambiente de pé ou não>\n"
-    "Risco: <opcional: domínios críticos tocados e invariantes em jogo>"
+    "Risco: <domínios críticos tocados e invariantes em jogo>"
 )
 FAILED_RESULT_MARKERS = (
     "doesn't want to proceed",
@@ -156,9 +158,10 @@ def main():
     missing = missing_labels(prompt)
     if missing:
         emit("deny", (
-            "Briefing do critical-review incompleto: falta {missing}. O gate revisa só o escopo declarado "
-            "e não refaz o que já foi verificado; sem isso ele rederiva a árvore inteira, que costuma ter "
-            "trabalho de outras sessões. Refaça a chamada com estas linhas no prompt:\n{template}"
+            "Briefing do critical-review incompleto: falta {missing}. O gate é só de risco crítico e revisa só o "
+            "recorte declarado (hunks críticos e irmãos), sem refazer o que já foi verificado. Sem domínio crítico "
+            "tocado, não chame o gate: feche com os testes, o lint e a conferência pedido × feito. Senão, refaça a "
+            "chamada com estas linhas no prompt:\n{template}"
         ).format(missing=", ".join(missing), template=TEMPLATE))
         return
 

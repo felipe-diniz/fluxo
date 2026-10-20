@@ -40,15 +40,16 @@ Regras do plugin fluxo, carregadas no início de cada sessão. Valem junto com o
 
 # Gate de pré-commit (subagent `fluxo:critical-review`)
 
-- É o ÚNICO agente de revisão: revisão crítica, QA de entrega (pedido × feito, comportamento fora do trilho), medição no ambiente e conferência de testes, docs e memória, numa passada só. Não existe agente separado de QA nem de revisão "live"; doc ou memória antiga que mande rodar `qa` ou `critical-review-live` quer dizer este gate.
-- Quando: UMA vez por sessão, no FIM, com testes verdes, antes do commit, sobre tudo o que a sessão fez (2 ou 3 frentes = uma passada só). Se o usuário pedir commits de entrega separados, uma passada por entrega.
+- É o ÚNICO agente de revisão, e só de risco crítico: no recorte crítico, revisa a fundo, confere pedido × feito e o comportamento fora do trilho, mede no ambiente e confere os testes e o doc da regra, numa passada só. Não existe agente separado de QA nem de revisão "live"; doc ou memória antiga que mande rodar `qa` ou `critical-review-live` quer dizer este gate.
+- Quando: só se o diff da sessão muda uma invariante de risco crítico. UMA vez, no FIM, com testes verdes, antes do commit (2 ou 3 frentes = uma passada só; commits de entrega separados = uma por entrega). Sem domínio crítico tocado não há gate: a sessão fecha com os testes do que mudou, lint/typecheck e a própria conferência pedido × feito.
+- Recorte: só os hunks que mudam a invariante e os irmãos deles (quem chama e quem consome o caminho alterado, e os testes desse caminho). Doc, memória, i18n, estilo e o resto da sessão sem risco ficam fora, mesmo numa sessão que tocou algo crítico.
 - Antes de chamar, rode o que é barato e determinístico: testes do que mudou, lint/typecheck dos projetos afetados e as checagens que o projeto declarar. O gate não é linter nem test runner.
-- Briefing obrigatório no prompt (um hook recusa a chamada sem as três primeiras linhas):
+- Briefing obrigatório no prompt (um hook recusa a chamada sem as quatro linhas):
   - `Pedido:` o que o usuário pediu, nas palavras dele, e o doc de origem.
-  - `Escopo:` arquivos e/ou commits da sessão, untracked incluídos, e o que na árvore NÃO é da sessão.
+  - `Escopo:` o recorte crítico (arquivos e hunks críticos e os irmãos, untracked incluídos), o que da sessão fica fora por não ter risco e o que na árvore NÃO é da sessão.
   - `Verificado:` o que já rodou, com resultado (suíte com a contagem, lint, typecheck, sondas), e se o ambiente está de pé.
-  - `Risco:` (opcional) domínios críticos tocados e invariantes em jogo.
-- NÃO acione para: desenho, plano, análise, investigação de bug, validação de fluxo (o principal decide, com `ultrathink` se preciso; leitura ampla vai ao `fluxo:explore`); sessão sem mudança de comportamento (só doc, memória, texto, teste); correção dos achados que ele mesmo apontou; commit já revisado. Nunca em paralelo, nunca relançado no meio da sessão.
+  - `Risco:` os domínios críticos tocados e as invariantes em jogo.
+- NÃO acione para: mudança sem domínio crítico; desenho, plano, análise, investigação de bug, validação de fluxo (o principal decide, com `ultrathink` se preciso; leitura ampla vai ao `fluxo:explore`); sessão sem mudança de comportamento (só doc, memória, texto, teste); correção dos achados que ele mesmo apontou; commit já revisado. Nunca em paralelo, nunca relançado no meio da sessão.
 - Depois do relatório, o principal: corrige o que veio (P0 a P3) cobrindo com teste que falha sem a correção; executa os cenários listados com as ferramentas do ambiente; leva ao usuário só o que nenhuma ferramenta alcança, com o porquê.
 - Nova passada só quando o relatório marcar `re-revisão: sim` (P0 cuja correção muda o desenho): escopo = só o delta dessa correção, uma vez, com `RE-REVISÃO P0` na primeira linha do prompt. Fora disso, o hook pede confirmação do usuário a partir da 2ª chamada na sessão.
 - Ele roda no modelo da sessão e em `max` pelo próprio frontmatter: nunca passe `model` nem `effort` na chamada (o hook recusa). Os edits resultantes são aplicados no contexto principal, nunca dentro do subagent.
