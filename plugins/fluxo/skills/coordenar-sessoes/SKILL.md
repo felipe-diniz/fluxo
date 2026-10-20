@@ -123,8 +123,17 @@ segue [modelos/frente.md](modelos/frente.md):
 4. As skills da camada (só as que a frente toca, e só as references do tópico), o doc de risco crítico do projeto e só a
    reference do domínio tocado, e as memórias do domínio.
 5. O nível de prova (§7) e o portão medido; o fecho: gate único, consertos, commit (ou "NÃO COMMITE") e o relatório.
+6. As decisões já tomadas: as respostas literais do dono às dúvidas tiradas antes do lançamento (abaixo).
 
-Decisão que surgir no meio volta à coordenadora com o caso real, as opções e a recomendação; ela pergunta ao dono pela
+**Antes de lançar, tire todas as dúvidas.** A frente roda sem ninguém olhando: dúvida que só aparece no meio a deixa
+parada ou acorda o dono. Ao montar a parte da frente, liste tudo o que ela pode precisar decidir: critério de aceite,
+fronteira do escopo, escolha de desenho que muda o produto, regra de negócio, texto que o cliente lê, e cada item que
+exige o sim do dono (banco, backfill, script em massa, secret/env, guard, produção, push). Pergunte tudo ao dono de uma
+vez, pela ferramenta de perguntas (até 4 por chamada, a recomendada primeiro). As respostas entram literais, com data e
+escopo, no bloco de decisões do prompt e no `fila.md`. Só lance com o bloco fechado; o que não dava para prever segue a
+regra de não travar.
+
+Decisão que surgir no meio, fora do bloco, volta à coordenadora com o caso real, as opções e a recomendação; ela pergunta ao dono pela
 ferramenta de perguntas, com uma opção marcada como recomendada, e devolve a resposta literal. Exigem o sim do dono
 ANTES, sempre pela coordenadora: o que o perfil e o `CLAUDE.md` do projeto listam (mudança de banco, backfill, script em
 massa, secret/env, regra de negócio, guard que bloqueia resposta ou venda, produção). A sessão pede e segue com o resto.
@@ -199,6 +208,18 @@ do Bash, mensagens entre sessões e arquivos de estado sem teto.
   `handoff/coordenadora.md`, não a conversa anterior; confira as sessões vivas em `agents --json` e renove o
   `notify_when_idle` de cada uma (o aviso pedido antes do `/clear` pode não chegar); se o nome da coordenadora mudou, avise
   as ativas.
+- **Corrida autônoma (ninguém supervisionando por horas): relé no lugar do `/clear`.** A coordenadora roda como sessão
+  de fundo, `<prefixo>-coord-<n>`, aberta com o mesmo comando das frentes (§2) e o prompt "rode a skill
+  fluxo:coordenar-sessoes e retome a coordenação; corrida autônoma, relé ligado". No terminal ela não conseguiria se
+  parar, e os avisos pendentes a acordariam. No checkpoint de fim de rodada, no lugar do aviso de `/clear`:
+  1. grava o checkpoint (§3);
+  2. abre a sucessora `<prefixo>-coord-<n+1>` com o mesmo comando e o mesmo prompt;
+  3. confere em `agents --json` que ela está viva;
+  4. se encerra com `"$C" stop <o próprio id, achado pelo nome no mesmo JSON>` e não faz mais nada.
+  A sucessora segue o "Retomar depois do `/clear`" e manda o nome novo a cada sessão viva, com `notify_when_idle`. Medido
+  em 20/10/2026: a sucessora nasce e assume, a antiga sai da lista, e a frente responde à nova pelo nome. Na corrida
+  autônoma ninguém responde pergunta: as dúvidas de todas as frentes previstas são tiradas antes de soltar a corrida
+  (§4); o que surgir depois vai às pendências do dono no `fila.md`, e a coordenadora segue com outra frente.
 - **Mensagem só para recurso, decisão e relatório.** O andamento vai para o HANDOFF; a coordenadora o lê quando precisa.
 - **Saída longa em arquivo** (`$D/logs/<sessão>/`), no contexto só o resumo (`tail -n 5`, o grep da contagem e das
   falhas).

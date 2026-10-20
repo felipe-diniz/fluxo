@@ -1,5 +1,7 @@
 <Uma frase do que a sessão entrega.> Pedido do dono em <data>, nas palavras dele: "<texto literal>". <Se houve escolha: "Decisão do dono (<data>, entre N opções): <rótulo>. Na opção escolhida: <texto da opção>." Não reabra a decisão.> <Se houve aprovação: Aprovado pelo dono (<data>): "<texto literal>", vale para <o quê, onde>. Fora disso, nada está aprovado.> Na branch `<branch>` do checkout `<checkout>`, sem branch nova, sessão autônoma.
 
+Decisões já tomadas (perguntadas ao dono antes do lançamento, <data>, literais): <dúvida → resposta, e onde vale>. Dúvida que esta lista responde não volta à coordenadora: siga a resposta.
+
 O contrato e o que existe (confira antes de escrever):
 - o contrato: <PRD, plano da frente ou ADR, com as seções desta fase>; leia as seções inteiras;
 - <o fato medido: linha de base, log sem PII, reprodução; produção só leitura e contagem>;

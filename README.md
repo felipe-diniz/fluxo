@@ -123,6 +123,8 @@ Conserto curto não vira frente: fica na sessão atual.
 
 Cada frente nova abre uma sessão nova. A coordenadora não reaproveita sessão de outra frente. No fim de cada rodada, ela salva o estado em disco e avisa que você pode dar `/clear`. Ao rodar `/fluxo:coordenar-sessoes` de novo, ela relê o estado do disco e volta a acompanhar as sessões vivas.
 
+Numa corrida autônoma, sem ninguém para dar `/clear`, a coordenadora roda em segundo plano e faz um relé no fim de cada rodada: abre a sucessora, confere que ela está viva e se encerra. A sucessora parte do estado em disco e avisa as frentes do nome novo. As dúvidas de todas as frentes são tiradas antes de soltar a corrida.
+
 O que é de cada projeto (portas, comandos, modo de commit, como provar) fica num perfil, procurado nesta ordem:
 
 1. `.claude/coordenacao/` no repo: versionado, para o time inteiro;
