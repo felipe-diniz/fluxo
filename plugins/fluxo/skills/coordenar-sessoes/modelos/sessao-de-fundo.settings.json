@@ -1,0 +1,49 @@
+{
+  "disableClaudeAiConnectors": true,
+  "env": {
+    "CLAUDE_CODE_DISABLE_ARTIFACT": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Workflow",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "NotebookEdit",
+      "AskUserQuestion"
+    ]
+  },
+  "skillOverrides": {
+    "built-in-browser": "user-invocable-only",
+    "chrome-browser": "user-invocable-only",
+    "computer-use": "user-invocable-only",
+    "anthropic-skills:deep-research": "user-invocable-only",
+    "deep-research": "user-invocable-only",
+    "docs": "user-invocable-only",
+    "docx": "user-invocable-only",
+    "google-workspace": "user-invocable-only",
+    "import-memory": "user-invocable-only",
+    "morning": "user-invocable-only",
+    "pdf": "user-invocable-only",
+    "pptx": "user-invocable-only",
+    "setup-writing-style": "user-invocable-only",
+    "skill-creator": "user-invocable-only",
+    "xlsx": "user-invocable-only",
+    "dataviz": "user-invocable-only",
+    "artifact-design": "user-invocable-only",
+    "artifact-diagramming": "user-invocable-only",
+    "artifact-capabilities": "user-invocable-only",
+    "keybindings-help": "user-invocable-only",
+    "code-review": "user-invocable-only",
+    "simplify": "user-invocable-only",
+    "fewer-permission-prompts": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "schedule": "user-invocable-only",
+    "claude-api": "user-invocable-only",
+    "workflow-authoring": "user-invocable-only",
+    "run": "user-invocable-only",
+    "plugin-authoring": "user-invocable-only",
+    "init": "user-invocable-only",
+    "security-review": "user-invocable-only",
+    "coordenar-sessoes": "user-invocable-only"
+  }
+}

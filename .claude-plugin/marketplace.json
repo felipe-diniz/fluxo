@@ -1,0 +1,16 @@
+{
+  "name": "fluxo",
+  "owner": {
+    "name": "Felipe Diniz"
+  },
+  "metadata": {
+    "description": "Fluxo de trabalho do Felipe com Claude Code: agentes, gate de pré-commit e coordenação de sessões."
+  },
+  "plugins": [
+    {
+      "name": "fluxo",
+      "source": "./plugins/fluxo",
+      "description": "Fluxo de trabalho com Claude Code: agentes Explore/implement/research/critical-review, gate único de pré-commit e coordenação de sessões em background."
+    }
+  ]
+}
