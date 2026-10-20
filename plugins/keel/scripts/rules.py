@@ -18,8 +18,8 @@ try:
 
     if migrate.has_work(migrate.plan()):
         sys.stdout.write(
-            "\nPLUGIN NOTICE: something duplicates keel (a manual install from before the plugin, or the plugin "
-            "under its old name, fluxo). In the first reply, suggest the user run /keel:migrate.\n"
+            "\nPLUGIN NOTICE: something duplicates keel (agents, hooks, a skill or rules copied into ~/.claude by "
+            "hand before the plugin). In the first reply, suggest the user run /keel:migrate.\n"
         )
 except Exception:
     pass

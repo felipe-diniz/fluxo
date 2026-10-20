@@ -44,7 +44,7 @@ Install it and start working. There is no setup step.
 
 **Zero setup**
 
-- Install and start. If you used the manual setup or the plugin under its old name, `fluxo`, `/keel:migrate` removes the old copies so nothing runs twice.
+- Install and start. If you had copied the agents, hooks, skill or rules into `~/.claude` by hand, `/keel:migrate` removes those copies so nothing runs twice.
 
 ## What's included
 
@@ -83,9 +83,9 @@ claude plugin install keel@keel
 
 Open a new session. To check, ask "which keel: agents do you have?". All four should appear.
 
-### Coming from fluxo or from the manual setup
+### Coming from the manual setup
 
-keel used to be called `fluxo`. If you have `fluxo@fluxo` installed, or copied the agents, hooks, skill or rules into `~/.claude` by hand, everything now runs twice. Run once:
+If you copied the agents, hooks, skill or rules into `~/.claude` by hand before the plugin existed, everything now runs twice. Run once:
 
 ```
 /keel:migrate
@@ -93,15 +93,12 @@ keel used to be called `fluxo`. If you have `fluxo@fluxo` installed, or copied t
 
 It shows a plan and applies it only after you say yes. Everything it removes from your files is first copied to `~/.claude/backups/keel-<date>/`:
 
-- the plugin `fluxo@fluxo` and its marketplace (user scope), through `claude plugin uninstall` and `claude plugin marketplace remove`. The marketplace stays while keel itself came from it (`keel@fluxo`), and the plan says how to move keel to its own. Without the `claude` CLI on the PATH, it disables `fluxo@fluxo` in `~/.claude/settings.json` and prints the commands for you to run;
 - the user agents `Explore`, `implement`, `research` and `critical-review` from `~/.claude/agents/`;
 - `critical-review-gate.py` and `review-bash-guard.py` from `~/.claude/hooks/`, and their entries in `~/.claude/settings.json`;
 - the personal skill `~/.claude/skills/coordenar-sessoes`;
 - from `~/.claude/CLAUDE.md`, only the sections the manual setup copied, by their old Portuguese titles. A generic title such as `# Compact Instructions` goes only beside one of the specific ones. Your own rules, such as commits and language, stay.
 
 While something duplicates the plugin, the session warns you at the start and suggests `/keel:migrate`.
-
-Projects set up under the old name keep working: the coordination skill reads the old `.claude/coordenacao/` profile and renames the old state files, and the gate accepts the Portuguese briefing keys (`Pedido:`, `Escopo:`, `Verificado:`, `Risco:`).
 
 ## Day-to-day use
 
@@ -209,7 +206,7 @@ Setup with `/keel:memory`:
 
 The automatic part:
 
-- In a project that already versions memory per developer (tracked files in `.claude/memory/<dev>/`), a new machine gets linked on the first session when your folder name is known (`KEEL_DEV`, or the name you use in your other linked projects) and nothing has to move. Otherwise the session suggests `/keel:memory`.
+- In a project that already versions memory per developer (tracked files in `.claude/memory/<dev>/`), a new machine gets linked on the first session with nothing to set: your folder is the one whose commits are mostly yours (by your git email or name), and a developer with no folder yet gets a new one named after their git user. When nothing has to move, it links on its own; otherwise the session suggests `/keel:memory`.
 - A link to the old single folder, a broken link or an empty folder gets relinked. A link that points anywhere else stays as it is.
 - A project that does not version memory gets only a suggestion, never an automatic folder, so public and third-party repositories stay clean.
 - Declining in `/keel:memory` silences the suggestion for that project. That choice is stored on your machine, not in the repo.
@@ -217,9 +214,12 @@ The automatic part:
 Folder name resolution, in this order:
 
 1. `--dev <name>` given to the command;
-2. the `KEEL_DEV` environment variable;
-3. the folder name you already use in other linked projects;
-4. otherwise, a suggestion from your git user that the command asks you to confirm.
+2. the `KEEL_DEV` environment variable, an optional override;
+3. the folder the current link points to;
+4. the folder whose commits are mostly yours;
+5. the folder name you already use in other linked projects;
+6. a new folder named after your git user, when the project versions memory and no folder has that name;
+7. otherwise, a suggestion from your git user that the command asks you to confirm.
 
 Secret guard: a Write or Edit into `.claude/memory/` or into an auto memory folder (`~/.claude/projects/<project>/memory/`) is refused when the new text contains any of the following, and the agent rewrites the memory without the value:
 

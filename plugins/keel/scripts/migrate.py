@@ -9,10 +9,7 @@ What goes, with a backup in ~/.claude/backups/keel-<date>/:
 - from ~/.claude/CLAUDE.md, only the sections the manual install copied: the old Portuguese titles, with "Princípios
   gerais" and "Compact Instructions" only beside one of the other three (and the <!-- fluxo:inicio --> block of old
   versions). The rest of the file stays;
-- the old setup-version stamp;
-- the plugin under its old name, `fluxo@fluxo`, and its marketplace (user scope), through `claude plugin`. The
-  marketplace stays while another plugin installed from it remains (keel itself, as `keel@fluxo`). Without the CLI on
-  the PATH, the old plugin is disabled in ~/.claude/settings.json and the commands are printed.
+- the old setup-version stamp.
 
 No argument: only shows the plan. `--apply`: runs it. `--self-test`: runs the scenarios in a temporary home.
 """
@@ -21,7 +18,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 
@@ -38,8 +34,6 @@ SPECIFIC_HEADINGS = (
     "# Gate de pré-commit (subagent `critical-review`)",
 )
 GENERIC_HEADINGS = ("# Princípios gerais", "# Compact Instructions")
-OLD_PLUGIN = "fluxo@fluxo"
-OLD_MARKETPLACE = "fluxo"
 
 
 def home():
@@ -117,7 +111,7 @@ def without_legacy_hooks(events):
     return cleaned, removed
 
 
-def cleaned_settings(disable_old_plugin):
+def cleaned_settings():
     path = os.path.join(home(), "settings.json")
     text = read(path)
     try:
@@ -135,10 +129,6 @@ def cleaned_settings(disable_old_plugin):
                 settings["hooks"] = events
             else:
                 del settings["hooks"]
-    enabled = settings.get("enabledPlugins")
-    if disable_old_plugin and isinstance(enabled, dict) and enabled.get(OLD_PLUGIN):
-        enabled[OLD_PLUGIN] = False
-        changes.append("disable {}".format(OLD_PLUGIN))
     if not changes:
         return None
     return path, json.dumps(settings, ensure_ascii=False, indent=2) + "\n", changes
@@ -172,66 +162,20 @@ def cleaned_claude_md():
     return path, (new + "\n" if new else ""), removed or ["the old <!-- fluxo:inicio --> block"]
 
 
-def old_plugin():
-    plugins = read_json(os.path.join(home(), "plugins", "installed_plugins.json")).get("plugins")
-    plugins = plugins if isinstance(plugins, dict) else {}
-    installs = [entry for entry in plugins.get(OLD_PLUGIN) or [] if isinstance(entry, dict)]
-    settings = read_json(os.path.join(home(), "settings.json"))
-    switches = settings.get("enabledPlugins")
-    switches = switches if isinstance(switches, dict) else {}
-    enabled = bool(switches.get(OLD_PLUGIN))
-    extra = settings.get("extraKnownMarketplaces")
-    marketplace = (OLD_MARKETPLACE in read_json(os.path.join(home(), "plugins", "known_marketplaces.json"))
-                   or isinstance(extra, dict) and OLD_MARKETPLACE in extra)
-    # Other plugins from the old marketplace, keel itself among them when it came as `keel@fluxo`: removing the
-    # marketplace would uninstall them.
-    staying = sorted(key for key in set(plugins) | {key for key, on in switches.items() if on}
-                     if key.endswith("@" + OLD_MARKETPLACE) and key != OLD_PLUGIN)
-    if not (installs or enabled or marketplace):
-        return None
-    return {"installs": installs, "enabled": enabled, "marketplace": marketplace, "staying": staying}
-
-
-def old_plugin_commands(old):
-    """`claude plugin` commands that remove the old plugin, each with the folder to run it in (None = anywhere)."""
-    commands, seen = [], set()
-    for install in old["installs"] or ([{"scope": "user"}] if old["enabled"] else []):
-        scope = install.get("scope") or "user"
-        folder = None if scope == "user" else install.get("projectPath") or ""
-        if (scope, folder) not in seen:
-            seen.add((scope, folder))
-            commands.append((["claude", "plugin", "uninstall", OLD_PLUGIN, "--scope", scope], folder))
-    if old["marketplace"] and not old["staying"]:
-        # Without a scope it would also leave the project settings of the folder it runs in.
-        commands.append((["claude", "plugin", "marketplace", "remove", OLD_MARKETPLACE, "--scope", "user"], None))
-    return commands
-
-
 def plan():
-    old = old_plugin()
-    cli = shutil.which("claude")
     stamp = os.path.join(home(), STAMP)
     return {
         "agents": legacy_agents(),
         "hooks": legacy_hooks(),
         "skill": legacy_skill(),
-        "settings": cleaned_settings(disable_old_plugin=bool(old and old["enabled"] and not cli)),
+        "settings": cleaned_settings(),
         "claude_md": cleaned_claude_md(),
         "stamp": stamp if os.path.isfile(stamp) else None,
-        "old_plugin": old_plugin_commands(old) if old else [],
-        "kept_marketplace": old["staying"] if old and old["marketplace"] else [],
-        "cli": cli,
     }
 
 
 def has_work(steps):
-    # A marketplace kept for keel@fluxo is a note in the plan, not work: keel runs fine from it.
-    return any(value for key, value in steps.items() if key not in ("cli", "kept_marketplace"))
-
-
-def describe(command, folder):
-    where = " (in {})".format(folder) if folder else (" (in the project it was installed for)" if folder == "" else "")
-    return "`{}`{}".format(" ".join(command), where)
+    return any(steps.values())
 
 
 def print_plan(steps, applying):
@@ -251,23 +195,10 @@ def print_plan(steps, applying):
             steps["claude_md"][0], "; ".join(steps["claude_md"][2])))
     if steps["stamp"]:
         print("- delete the old version stamp {}".format(steps["stamp"]))
-    for command, folder in steps["old_plugin"]:
-        verb = "run" if steps["cli"] and folder is None else "the user runs, in a terminal,"
-        print("- remove keel's old name: {} {}".format(verb, describe(command, folder)))
-    if steps["kept_marketplace"]:
-        print("- " + kept_marketplace_note(steps))
-
-
-def kept_marketplace_note(steps):
-    staying = ", ".join(steps["kept_marketplace"])
-    return ("keep the marketplace `{0}`: {1} still come(s) from it. To move keel to its own, in a terminal: "
-            "`claude plugin marketplace add felipe-diniz/keel`, `claude plugin install keel@keel`, then uninstall {1} "
-            "and run `claude plugin marketplace remove {0} --scope user`".format(OLD_MARKETPLACE, staying))
 
 
 def apply(steps):
     backup = os.path.join(home(), "backups", "keel-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    report, pending = [], []
 
     def move_to_backup(path):
         destination = os.path.join(backup, os.path.relpath(path, home()))
@@ -285,28 +216,13 @@ def apply(steps):
         move_to_backup(path)
     if steps["skill"]:
         move_to_backup(steps["skill"])
-    # Files first: `claude plugin` rewrites settings.json itself, and the plan's copy would undo it.
     if steps["settings"]:
         rewrite(steps["settings"][0], steps["settings"][1])
     if steps["claude_md"]:
         rewrite(steps["claude_md"][0], steps["claude_md"][1])
     if steps["stamp"]:
         move_to_backup(steps["stamp"])
-    for command, folder in steps["old_plugin"]:
-        if not steps["cli"] or folder is not None and not os.path.isdir(folder):
-            pending.append(describe(command, folder))
-            continue
-        try:
-            result = subprocess.run([steps["cli"]] + command[1:], cwd=folder, capture_output=True, text=True,
-                                    timeout=120)
-            output = (result.stdout + result.stderr).strip().replace("\n", " ")
-            ok = result.returncode == 0
-        except (OSError, subprocess.SubprocessError) as error:
-            output, ok = str(error), False
-        report.append("{}: {}".format(describe(command, folder), "done" if ok else "failed ({})".format(output[:300])))
-        if not ok:
-            pending.append(describe(command, folder))
-    return report, pending, backup if os.path.isdir(backup) else None
+    return backup if os.path.isdir(backup) else None
 
 
 def main():
@@ -317,17 +233,11 @@ def main():
     applying = "--apply" in args
     if not has_work(steps):
         print("Nothing to migrate: nothing duplicates the keel plugin.")
-        if steps["kept_marketplace"]:
-            print("Note: " + kept_marketplace_note(steps))
         return
     print_plan(steps, applying)
     if not applying:
         return
-    report, pending, backup = apply(steps)
-    for line in report:
-        print("- " + line)
-    if pending:
-        print("Still to do by hand, in a terminal (or in /plugin): " + "; ".join(pending))
+    backup = apply(steps)
     print("Done.{} Start a new session for only the plugin to apply.".format(
         " Backup: {}.".format(backup) if backup else ""))
 
@@ -340,9 +250,7 @@ def self_test():
             failures.append(name)
 
     sandbox = tempfile.mkdtemp(prefix="keel-migrate-")
-    saved = {key: os.environ.get(key) for key in ("CLAUDE_CONFIG_DIR", "PATH")}
-    bin_dir = os.path.join(sandbox, "bin")
-    log = os.path.join(sandbox, "claude.log")
+    saved = {key: os.environ.get(key) for key in ("CLAUDE_CONFIG_DIR",)}
 
     def put(path, content):
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -355,9 +263,6 @@ def self_test():
         return home()
 
     try:
-        os.makedirs(bin_dir)
-        os.environ["PATH"] = bin_dir
-
         # 1. Nothing installed: no work, and a CLAUDE.md with only the user's sections stays untouched, even with
         # generic titles like the plugin's.
         root = fresh_home("empty")
@@ -381,8 +286,8 @@ def self_test():
                                              "# Compact Instructions\n\n- old\n")
         steps = plan()
         check("manual: plan", steps["agents"] == [os.path.join(root, "agents", "explore.md")] and steps["hooks"]
-              and steps["skill"] and steps["settings"] and steps["claude_md"] and not steps["old_plugin"])
-        _, pending, backup = apply(steps)
+              and steps["skill"] and steps["settings"] and steps["claude_md"])
+        backup = apply(steps)
         settings = read_json(os.path.join(root, "settings.json"))
         check("manual: settings keep the user's hook", settings.get("theme") == "dark" and [
             group["matcher"] for group in settings["hooks"]["PreToolUse"]] == ["Bash"])
@@ -390,51 +295,7 @@ def self_test():
         check("manual: moved to the backup", backup and os.path.isfile(os.path.join(backup, "agents", "explore.md"))
               and not os.path.exists(os.path.join(root, "agents", "explore.md"))
               and os.path.isfile(os.path.join(root, "agents", "mine.md")))
-        check("manual: nothing pending", not pending and not has_work(plan()))
-
-        # 3. The old plugin with the CLI on the PATH: uninstalls it and removes its marketplace.
-        root = fresh_home("old-cli")
-        put(os.path.join(root, "plugins", "installed_plugins.json"), json.dumps(
-            {"plugins": {OLD_PLUGIN: [{"scope": "user"}], "keel@keel": [{"scope": "user"}]}}))
-        put(os.path.join(root, "plugins", "known_marketplaces.json"), json.dumps({OLD_MARKETPLACE: {}, "keel": {}}))
-        put(os.path.join(root, "settings.json"), json.dumps({"enabledPlugins": {OLD_PLUGIN: True, "keel@keel": True}}))
-        put(os.path.join(bin_dir, "claude"), "#!/bin/sh\necho \"$@\" >> \"{}\"\n".format(log))
-        os.chmod(os.path.join(bin_dir, "claude"), 0o755)
-        steps = plan()
-        check("old-cli: plan", [command[2] for command, _ in steps["old_plugin"]] == ["uninstall", "marketplace"]
-              and not steps["settings"])
-        _, pending, _ = apply(steps)
-        check("old-cli: ran the CLI", (read(log) or "").splitlines() == [
-            "plugin uninstall {} --scope user".format(OLD_PLUGIN),
-            "plugin marketplace remove {} --scope user".format(OLD_MARKETPLACE)])
-        check("old-cli: nothing pending", not pending)
-        os.remove(os.path.join(bin_dir, "claude"))
-
-        # 4. The old plugin without the CLI: disabled in settings.json, the commands stay for the user.
-        steps = plan()
-        check("old-no-cli: plan disables", steps["settings"] and "disable {}".format(OLD_PLUGIN) in steps["settings"][2])
-        _, pending, _ = apply(steps)
-        enabled = read_json(os.path.join(root, "settings.json"))["enabledPlugins"]
-        check("old-no-cli: disabled", enabled == {OLD_PLUGIN: False, "keel@keel": True})
-        check("old-no-cli: pending commands", len(pending) == 2)
-
-        # 5. keel installed from the old marketplace (`keel@fluxo`): the old plugin goes, the marketplace stays, and
-        # keel@fluxo alone is not work.
-        root = fresh_home("keel-from-fluxo")
-        installed = os.path.join(root, "plugins", "installed_plugins.json")
-        put(installed, json.dumps({"plugins": {OLD_PLUGIN: [{"scope": "user"}], "keel@fluxo": [{"scope": "user"}]}}))
-        put(os.path.join(root, "plugins", "known_marketplaces.json"), json.dumps({OLD_MARKETPLACE: {}}))
-        put(os.path.join(bin_dir, "claude"), "#!/bin/sh\necho \"$@\" >> \"{}\"\n".format(log))
-        os.chmod(os.path.join(bin_dir, "claude"), 0o755)
-        os.remove(log)
-        steps = plan()
-        check("keel-from-fluxo: plan", [command[2] for command, _ in steps["old_plugin"]] == ["uninstall"]
-              and steps["kept_marketplace"] == ["keel@fluxo"])
-        apply(steps)
-        check("keel-from-fluxo: marketplace kept", (read(log) or "").splitlines() == [
-            "plugin uninstall {} --scope user".format(OLD_PLUGIN)])
-        put(installed, json.dumps({"plugins": {"keel@fluxo": [{"scope": "user"}]}}))
-        check("keel-from-fluxo: no work left", not has_work(plan()))
+        check("manual: nothing left", not has_work(plan()))
     finally:
         for key, value in saved.items():
             if value is None:

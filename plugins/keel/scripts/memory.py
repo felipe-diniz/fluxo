@@ -220,7 +220,24 @@ def git_user_name(root):
     return clean_name(name[0] if name else email.split("@")[0])
 
 
-def resolve_dev(root, explicit, link):
+def authored_folder(root, devs):
+    """The developer folder whose commits are mostly this git user's (by email or name): who you are in this repo,
+    with nothing to set."""
+    email = (git(root, "config", "user.email") or "").strip().lower()
+    name = (git(root, "config", "user.name") or "").strip().lower()
+    mine = []
+    for dev in devs:
+        counts = {}
+        for line in (git(root, "log", "--format=%ae%x09%an", "--", ".claude/memory/" + dev) or "").splitlines():
+            author_email, _, author_name = line.lower().partition("\t")
+            key = "me" if author_email == email and email or author_name == name and name else author_email
+            counts[key] = counts.get(key, 0) + 1
+        if counts and max(counts, key=counts.get) == "me":
+            mine.append(dev)
+    return mine[0] if len(mine) == 1 else None
+
+
+def resolve_dev(root, explicit, link, devs=()):
     """The developer's folder name, where it came from, and whether it is reliable (only a reliable one lets the
     hook link on its own)."""
     if explicit:
@@ -229,10 +246,18 @@ def resolve_dev(root, explicit, link):
         return clean_name(os.environ["KEEL_DEV"]), "KEEL_DEV", True
     if link[0] == "ok":
         return link[1], "current link", True
+    authored = authored_folder(root, devs)
+    if authored:
+        return authored, "the folder your commits are in", True
     elsewhere = names_linked_elsewhere(root)
     if len(elsewhere) == 1:
         return next(iter(elsewhere)), "the folder you use in your other projects", True
-    return git_user_name(root), "suggested from the git user", False
+    suggested = git_user_name(root)
+    # A new developer in a per-developer project: a folder named after the git user, unless someone else's has
+    # that name.
+    if devs and suggested and suggested not in devs:
+        return suggested, "a new folder named after your git user", True
+    return suggested, "suggested from the git user", False
 
 
 def index_imports(root):
@@ -299,7 +324,7 @@ def analyze(root, explicit=None):
     kind, loose, devs = layout(root)
     auto_dir, configured = auto_memory_dir(root)
     link = link_state(auto_dir, base)
-    dev, source, reliable = resolve_dev(root, explicit, link)
+    dev, source, reliable = resolve_dev(root, explicit, link, devs)
     return {
         "root": root, "base": base, "layout": kind, "loose": loose, "devs": devs,
         "auto_dir": auto_dir, "configured": configured, "link": link,
@@ -1020,6 +1045,28 @@ def self_test():
         finally:
             os.symlink = real_symlink
         os.environ.pop("KEEL_DEV")
+
+        # 14. No KEEL_DEV and no link: the folder your commits are in is yours, and a new developer gets a folder
+        # named after their git user.
+        root = new_repo("authored")
+        put(os.path.join(memory_base(root), "ana", INDEX), "- [A](a.md) — ana's\n")
+        commit(root)
+        put(os.path.join(memory_base(root), "bia", INDEX), "- [B](b.md) — bia's\n")
+        git(root, "add", "-A")
+        git(root, "-c", "user.name=Bia Other", "-c", "user.email=bia@x.test", "commit", "-q", "-m", "x")
+        output = hook_output(root, "startup")
+        check("authored: ana linked", link_state(auto_dir(root), memory_base(root)) == ("ok", "ana")
+              and "bia's" in output)
+        os.unlink(auto_dir(root))
+        git(root, "config", "user.email", "bia@x.test")
+        git(root, "config", "user.name", "Bia Other")
+        hook_output(root, "startup")
+        check("authored: bia linked", link_state(auto_dir(root), memory_base(root)) == ("ok", "bia"))
+        os.unlink(auto_dir(root))
+        git(root, "config", "user.email", "caio@x.test")
+        git(root, "config", "user.name", "Caio New")
+        hook_output(root, "startup")
+        check("authored: new developer", link_state(auto_dir(root), memory_base(root)) == ("ok", "caio"))
     finally:
         for key, value in saved.items():
             if value is None:
