@@ -1,215 +1,322 @@
-# fluxo
+# keel
 
-Plugin do [Claude Code](https://code.claude.com) com um método de trabalho pronto. Ele traz quatro agentes, um gate único de revisão antes do commit e uma skill para tocar várias frentes em paralelo em sessões de fundo. A ideia é que a sessão principal pense e decida, e que o trabalho braçal rode fora dela, em contexto isolado.
+A [Claude Code](https://code.claude.com) plugin that ships a ready-made working method: four agents, a single pre-commit review gate, a skill for running several fronts in parallel as background sessions, and per-developer versioned project memory. The main session thinks and decides. Wide reading, isolated writing and web research run outside it, in separate contexts.
 
-Instale e use: não há passo de configuração.
+Install it and start working. There is no setup step.
 
-## Por que usar
+## Why use it
 
-Sem método, uma sessão longa do Claude Code costuma cair em problemas como estes:
+**Quality where it matters**
 
-| Problema | O que o fluxo faz |
-| --- | --- |
-| A sessão principal lê dezenas de arquivos e o contexto incha: cada turno fica mais caro e a compactação chega mais cedo. | A leitura ampla vai ao `fluxo:explore` (haiku, só leitura), que devolve só a síntese com `arquivo:linha`. |
-| Código isolável e de especificação fechada é escrito no contexto principal. | Vai ao `fluxo:implement` (sonnet), com briefing fechado e teste focado. A principal confere o diff. |
-| A pesquisa na web despeja páginas inteiras no contexto. | Vai ao `fluxo:research` (sonnet), que devolve a síntese com as fontes. |
-| A revisão roda várias vezes por sessão, em tudo, e refaz o que já foi verificado. | Um gate só, o `fluxo:critical-review`, e só quando a sessão mudou uma invariante de risco crítico: uma vez, no fim, com testes verdes, só sobre os hunks críticos e os irmãos deles. Doc, i18n e o resto sem risco ficam fora. Um hook recusa a chamada sem briefing e pede confirmação a partir da segunda. |
-| O revisor "conserta" coisas, roda a suíte inteira ou faz commit no meio da revisão. | Dentro do gate, um guard de Bash recusa git que muda a árvore, escrita fora do temporário, suíte inteira, build, servidor, migration, instalação de pacote e rede externa. |
-| O agente mexe em dinheiro, auth ou dado de outro cliente com a mesma leveza de um CSS. | Risco crítico é contrato do projeto: o `implement` não toca nesses domínios e o gate revisa a fundo o que muda uma invariante deles. |
-| Várias frentes grandes na mesma sessão se atropelam, e o contexto vira uma mistura. | A skill `fluxo:coordenar-sessoes` abre uma sessão de fundo por frente, com prompt montado, fila, janela de recursos e modo de commit. |
-| A compactação esquece aprovações e o estado do gate. | As regras dizem o que a compactação tem de preservar: o pedido nas palavras do usuário, as aprovações literais, os arquivos, os comandos com resultado e o estado do gate. |
+- There is one review gate, `keel:critical-review`, before the commit. It runs only when the session changed a critical-risk invariant (money, auth, tenant isolation and the like).
+- It runs once, at the end, with tests green, at max effort. It reviews the critical hunks and their siblings (callers, consumers, the tests on that path).
+- Changes with no critical risk ship with tests and lint. Docs, i18n and the rest pay no review tax.
+- The `implement` agent does not touch critical domains. That work stays in the main session.
 
-O estilo `fluxo:direto` corta o texto de resposta, que é o token mais caro (saída), e evita a ida e volta de "posso seguir?" no rotineiro, sem tirar a pergunta onde ela importa.
+**Lower cost and faster sessions**
 
-O resultado é menos token gasto no contexto caro, revisão que não se repete e um padrão de entrega igual em todo projeto.
+- Wide reading goes to `keel:explore` (haiku, read-only), which returns only a synthesis with `file:line` references. Isolated writing goes to `keel:implement` (sonnet). Web research goes to `keel:research` (sonnet). The main context stays small, so each turn is cheaper and compaction comes later.
+- The lean profile used for background sessions cut the per-call base from 72k to 40k tokens. The skill listing in background sessions went from 22,662 to 4,779 characters.
+- The 400k compaction window cost the same as 300k in measurement and compacts less often. Each compaction loses detail.
+- The rules say what compaction must preserve: the request in the user's own words, literal approvals, files, commands with their results, and the gate state.
 
-## O que vem
+**Long autonomous runs**
 
-| Peça | Nome | Papel |
+- Parallel fronts run as real background sessions (`claude --bg`) for 12 to 20 hours, one session per front, with a queue, a resource window and a commit mode.
+- Questions from every front are asked up front, before the run starts.
+- With nobody there to type `/clear`, a relay replaces it: the coordinator opens its successor, checks that it is alive and exits.
+
+**Shared, versioned memory per developer**
+
+- Each developer writes to their own folder in `.claude/memory/`, so merges never conflict on the index. The team still reads each other's lessons, and git gives history and review. Details in [Versioned memory](#versioned-memory).
+
+**Guardrails enforced by hooks, not by hope**
+
+- The gate hook refuses a call without a briefing, and asks for confirmation from the second pass in a session.
+- Inside the reviewer, a Bash guard blocks anything that changes state: git that mutates the tree, writes outside the temp directory, full test suites, builds, servers, migrations, package installs and external network.
+- A secret guard keeps private keys, tokens in known formats and passwords in connection URLs out of memory.
+
+**A direct output style**
+
+- `keel:direct` starts with the result, with no preamble. It cuts response text, which is the most expensive token (output), and skips the "may I proceed?" round trip on routine work.
+- Decisions that belong to you become questions with the recommended option first.
+- All plugin text is in English; the session still answers in your language.
+
+**Zero setup**
+
+- Install and start. If you used the manual setup or the plugin under its old name, `fluxo`, `/keel:migrate` removes the old copies so nothing runs twice.
+
+## What's included
+
+| Piece | Name | Role |
 | --- | --- | --- |
-| Agente | `fluxo:explore` | Leitura ampla de código e docs locais. Só leitura, haiku, nasce sem o CLAUDE.md. |
-| Agente | `fluxo:implement` | Escrita isolável e não crítica: arquivo novo, teste no padrão, doc, refactor mecânico. |
-| Agente | `fluxo:research` | Pesquisa web: providers, docs externas, preços, limites, regras. |
-| Agente | `fluxo:critical-review` | Gate de pré-commit: QA de entrega, revisão de risco crítico, medição, testes, docs e memória. Devolve LIBERADO ou BARRADO. |
-| Hook | gate | Recusa a chamada ao gate sem `Pedido:`, `Escopo:`, `Verificado:` e `Risco:`, ou com `model`/`effort` de override; pede confirmação a partir da 2ª passada na sessão. |
-| Hook | guard de Bash | Só age dentro do `fluxo:critical-review`: o gate lê e mede, não muda estado. |
-| Hook | regras | No início da sessão e depois de cada compactação, põe no contexto as regras de roteamento, de risco crítico, do gate e da compactação ([regras.md](plugins/fluxo/regras.md)). |
-| Estilo de resposta | `fluxo:direto` | Proativo fora do risco crítico e da regra de negócio; começa pelo resultado, sem preâmbulo nem drama; decisão do usuário vira pergunta com a opção recomendada. Entra sozinho com o plugin ([direto.md](plugins/fluxo/output-styles/direto.md)). |
-| Skill | `/fluxo:coordenar-sessoes` | Coordenação de frentes em sessões `claude --bg`. |
-| Comando | `/fluxo:migrar` | Remove uma instalação manual antiga do fluxo (veja abaixo). |
+| Agent | `keel:explore` | Wide reading of local code and docs. Read-only, haiku, starts without the CLAUDE.md. |
+| Agent | `keel:implement` | Isolated, non-critical writing: a new file, a test following the pattern, docs, a mechanical refactor. |
+| Agent | `keel:research` | Web research: providers, external docs, prices, limits, rules. |
+| Agent | `keel:critical-review` | Pre-commit gate for critical risk: review, QA of the critical slice, measurement, tests and the rule's doc. Returns APPROVED or BLOCKED. |
+| Hook | gate | Refuses the gate call without `Request:`, `Scope:`, `Verified:` and `Risk:`, or with a `model`/`effort` override. Asks for confirmation from the 2nd pass in the session. |
+| Hook | Bash guard | Acts only inside `keel:critical-review`: the gate reads and measures, it does not change state. |
+| Hook | rules | At session start and after every compaction, puts the routing, critical-risk, gate and compaction rules in context ([rules.md](plugins/keel/rules.md)). |
+| Hook | memory | At session start, injects the other developers' memory indexes. In a project that already versions memory per developer, it can create your folder and link it when nothing has to move. |
+| Hook | memory secret guard | Refuses a Write or Edit into memory that contains a credential. |
+| Output style | `keel:direct` | Proactive outside critical risk and business rules. Starts with the result, no preamble. A user decision becomes a question with the recommended option first. Comes on with the plugin ([direct.md](plugins/keel/output-styles/direct.md)). |
+| Skill | `/keel:coordinate-sessions` | Coordinates fronts in `claude --bg` sessions. |
+| Command | `/keel:migrate` | Removes an old manual install and the plugin under its old name (see below). |
+| Command | `/keel:memory` | Sets up per-developer versioned memory (see below). |
 
-## Instalar
+## Install
 
-Requisitos: Claude Code e `python3` no PATH (os hooks são scripts Python sem dependência).
+Requirements: Claude Code and `python3` on the PATH (the hooks are Python scripts with no dependencies).
+
+In a session, on Claude Code 2.1.275 or later:
+
+```
+/plugin install keel --marketplace felipe-diniz/keel
+```
+
+Or from a terminal:
 
 ```sh
-claude plugin marketplace add felipe-diniz/fluxo
-claude plugin install fluxo@fluxo
+claude plugin marketplace add felipe-diniz/keel
+claude plugin install keel@keel
 ```
 
-Abra uma sessão nova. Para conferir, pergunte "quais agentes fluxo: você tem?": devem aparecer os quatro.
+Open a new session. To check, ask "which keel: agents do you have?". All four should appear.
 
-### Já usava a versão manual (cópias em `~/.claude`)?
+### Coming from fluxo or from the manual setup
 
-Quem copiou os agentes, os hooks, a skill ou as regras à mão vai ficar com tudo em dobro. Rode uma vez:
+keel used to be called `fluxo`. If you have `fluxo@fluxo` installed, or copied the agents, hooks, skill or rules into `~/.claude` by hand, everything now runs twice. Run once:
 
 ```
-/fluxo:migrar
+/keel:migrate
 ```
 
-Ele mostra o plano e só aplica com o seu sim. Tudo o que sai vai antes para `~/.claude/backups/fluxo-<data>/`:
+It shows a plan and applies it only after you say yes. Everything it removes from your files is first copied to `~/.claude/backups/keel-<date>/`:
 
-- os agentes de usuário `Explore`, `implement`, `research` e `critical-review` de `~/.claude/agents/`;
-- `critical-review-gate.py` e `review-bash-guard.py` de `~/.claude/hooks/`, e as entradas deles no `~/.claude/settings.json`;
-- a skill pessoal `~/.claude/skills/coordenar-sessoes`;
-- do `~/.claude/CLAUDE.md`, só as seções com o mesmo título das do plugin. Regras suas, como commits e idioma, ficam.
+- the plugin `fluxo@fluxo` and its marketplace (user scope), through `claude plugin uninstall` and `claude plugin marketplace remove`. The marketplace stays while keel itself came from it (`keel@fluxo`), and the plan says how to move keel to its own. Without the `claude` CLI on the PATH, it disables `fluxo@fluxo` in `~/.claude/settings.json` and prints the commands for you to run;
+- the user agents `Explore`, `implement`, `research` and `critical-review` from `~/.claude/agents/`;
+- `critical-review-gate.py` and `review-bash-guard.py` from `~/.claude/hooks/`, and their entries in `~/.claude/settings.json`;
+- the personal skill `~/.claude/skills/coordenar-sessoes`;
+- from `~/.claude/CLAUDE.md`, only the sections the manual setup copied, by their old Portuguese titles. A generic title such as `# Compact Instructions` goes only beside one of the specific ones. Your own rules, such as commits and language, stay.
 
-Enquanto houver instalação antiga, a sessão avisa no começo e sugere o `/fluxo:migrar`.
+While something duplicates the plugin, the session warns you at the start and suggests `/keel:migrate`.
 
-## Como usar no dia a dia
+Projects set up under the old name keep working: the coordination skill reads the old `.claude/coordenacao/` profile and renames the old state files, and the gate accepts the Portuguese briefing keys (`Pedido:`, `Escopo:`, `Verificado:`, `Risco:`).
 
-### Numa tarefa comum
+## Day-to-day use
 
-Você pede o trabalho como sempre. As regras do plugin já dizem à sessão como dividir:
+### On an ordinary task
 
-1. **Entender:** se precisar abrir o terceiro arquivo, a sessão manda um ou mais `fluxo:explore` em paralelo, cada um com uma pergunta.
-2. **Fazer:** desenho, decisão e tudo o que toca risco crítico ficam na sessão principal. O isolável vai ao `fluxo:implement`, com os arquivos que ele pode tocar e o teste que tem de passar.
-3. **Provar:** a sessão roda os testes do que mudou, o lint e o typecheck.
-4. **Revisar uma vez, só se tocou risco crítico:** com tudo verde, a sessão chama o `fluxo:critical-review` sobre os hunks que mudam a invariante e os irmãos deles (quem chama, quem consome, os testes desse caminho), com o briefing:
+Ask for the work as you always do. The plugin's rules already tell the session how to split it:
+
+1. **Understand:** if it would have to open a third file, the session sends one or more `keel:explore` agents in parallel, each with one question.
+2. **Do:** design, decisions and anything that touches critical risk stay in the main session. The isolable part goes to `keel:implement`, with the files it may touch and the test that must pass.
+3. **Prove:** the session runs the tests for what changed, the lint and the typecheck.
+4. **Review once, only if critical risk was touched:** with everything green, the session calls `keel:critical-review` over the hunks that change the invariant and their siblings (callers, consumers, the tests on that path), with this briefing:
 
    ```
-   Pedido: <o que você pediu, nas suas palavras, e o doc de origem>
-   Escopo: <o recorte crítico; o que da sessão fica fora por não ter risco; o que na árvore não é da sessão>
-   Verificado: <o que já rodou e o resultado; ambiente de pé ou não>
-   Risco: <domínios críticos tocados e invariantes em jogo>
+   Request: <what you asked for, in your words, and the source doc>
+   Scope: <the critical slice; what in the session stays out because it has no risk; what in the tree is not the session's>
+   Verified: <what already ran and the result; environment up or not>
+   Risk: <critical domains touched and the invariants at stake>
    ```
 
-5. **Fechar:** a sessão corrige o que o gate apontou, cobrindo com teste, e faz o commit. Uma nova passada só acontece quando o próprio relatório marca `re-revisão: sim`.
+5. **Close:** the session fixes what the gate flagged, covers it with a test, and commits. A new pass happens only when the report itself says `re-review: yes`.
 
-Sem domínio crítico tocado não há gate: a sessão fecha no passo 3, com a própria conferência pedido × feito. O gate também não entra em desenho, plano nem investigação de bug.
+With no critical domain touched there is no gate: the session closes at step 3, with its own request-versus-done check. The gate also does not run on design, planning or bug investigation.
 
-### Ensine o risco crítico do seu projeto
+### Teach it your project's critical risk
 
-Os agentes leem o risco crítico do `CLAUDE.md` do repo. Declare os domínios e aponte o doc de detalhe:
+The agents read critical risk from the repo's `CLAUDE.md`. Declare the domains and point to the detail doc, in the project's own language:
 
 ```markdown
-## Risco crítico
+## Critical risk
 
-Detalhe em [docs/risco-critico.md](docs/risco-critico.md).
+Details in [docs/critical-risk.md](docs/critical-risk.md).
 
-1. **Dinheiro**: cobrança, confirmação de pagamento, estorno.
-2. **Auth**: guards, papéis, sessão.
-3. **Isolamento entre clientes**: toda query filtra por `tenantId`.
+1. **Money**: charging, payment confirmation, refunds.
+2. **Auth**: guards, roles, sessions.
+3. **Tenant isolation**: every query filters by `tenantId`.
 ```
 
-Sem essa seção, vale o padrão: dinheiro, autenticação e autorização, isolamento entre tenants, concorrência e perda irreversível de dados.
+A section titled `## Risco crítico` counts too. Without the section the default applies: money, authentication and authorization, tenant isolation, concurrency and irreversible data loss.
 
-Projeto grande: deixe o doc de risco num núcleo curto (domínios, invariantes, o que exige aprovação) mais uma reference por domínio. O agente lê o núcleo e só a reference do domínio que vai tocar.
+For a large project, keep the risk doc as a short core (domains, invariants, what needs approval) plus one reference per domain. The agent reads the core and only the reference for the domain it is about to touch.
 
-### Várias frentes em paralelo
+### Parallel fronts
 
 ```
-/fluxo:coordenar-sessoes
+/keel:coordinate-sessions
 ```
 
-A sessão em que você roda vira a coordenadora. Para cada frente grande, com commit próprio e horas de trabalho, ela:
+The session where you run it becomes the coordinator. For each large front, with its own commit and hours of work, it:
 
-- escreve o prompt da frente;
-- abre uma sessão `claude --bg` com um perfil enxuto;
-- distribui recursos que não podem ser usados ao mesmo tempo, como porta, banco ou build pesado;
-- recebe o relatório quando a sessão termina.
+- writes the front's prompt;
+- opens a `claude --bg` session with a lean profile;
+- hands out resources that cannot be used at the same time, such as a port, a database or a heavy build;
+- receives the report when the session ends.
 
-Conserto curto não vira frente: fica na sessão atual.
+A short fix is not a front: it stays in the current session.
 
-Cada frente nova abre uma sessão nova. A coordenadora não reaproveita sessão de outra frente. No fim de cada rodada, ela salva o estado em disco e avisa que você pode dar `/clear`. Ao rodar `/fluxo:coordenar-sessoes` de novo, ela relê o estado do disco e volta a acompanhar as sessões vivas.
+Every new front opens a new session. The coordinator never reuses the session of another front. At the end of each round it saves its state to disk and tells you that you can `/clear`. When you run `/keel:coordinate-sessions` again, it rereads the state from disk and picks up the live sessions.
 
-Numa corrida autônoma, sem ninguém para dar `/clear`, a coordenadora roda em segundo plano e faz um relé no fim de cada rodada: abre a sucessora, confere que ela está viva e se encerra. A sucessora parte do estado em disco e avisa as frentes do nome novo. As dúvidas de todas as frentes são tiradas antes de soltar a corrida.
+In an autonomous run, with nobody to `/clear`, the coordinator runs in the background and does a relay at the end of each round: it opens its successor, checks that it is alive and exits. The successor starts from the state on disk and tells the fronts its new name. The questions from every front are settled before the run is released.
 
-O que é de cada projeto (portas, comandos, modo de commit, como provar) fica num perfil, procurado nesta ordem:
+What belongs to each project (ports, commands, commit mode, how to prove) lives in a profile, looked up in this order:
 
-1. `.claude/coordenacao/` no repo: versionado, para o time inteiro;
-2. `~/.claude/coordination/<projeto>/perfil/`: pessoal;
-3. se não houver nenhum, a skill monta o perfil a partir do `CLAUDE.md`, do doc de risco e dos settings do projeto, grava no item 2 e pergunta só o que faltar.
+1. `.claude/coordination/` in the repo (`profile.md` and `session.md`): versioned, for the whole team;
+2. `~/.claude/coordination/<project>/profile/`: personal;
+3. if neither exists, the skill builds the profile from the `CLAUDE.md`, the risk doc and the project settings, saves it to item 2 and asks only what is missing.
 
-Fila, janela de recursos, prompts e logs ficam em `~/.claude/coordination/<projeto>/`, fora do repo.
+The queue, resource window, prompts and logs stay in `~/.claude/coordination/<project>/`, outside the repo.
 
-## Configuração recomendada (opcional)
+### Versioned memory
 
-No `~/.claude/settings.json`, o que vale para todo projeto:
+Layout:
+
+- `.claude/memory/<dev>/` holds one folder per developer, one fact per file, plus that folder's `MEMORY.md` index.
+- Claude Code's auto memory directory (`~/.claude/projects/<project>/memory`) is a symlink to your folder.
+- Fallback when symlinks are not available: `autoMemoryDirectory` in `.claude/settings.local.json`, written only by `/keel:memory`, with a backup, and only when that file is git-ignored.
+
+Why per developer:
+
+- There is one writer per folder, so the indexes never conflict on merge.
+- The team still reads each other's lessons.
+- Git gives history and review.
+
+Loading without duplication:
+
+- Your own index loads natively through auto memory (first 200 lines or 25 KB).
+- The plugin's SessionStart hook injects the other developers' indexes, up to about 8,000 characters. They are fenced as data, not instructions, because a pull request could plant instructions. What does not fit is listed for on-demand reading.
+- No CLAUDE.md imports a memory index, so nothing loads twice.
+
+Rules the plugin gives the agent:
+
+- Write only to your own folder.
+- Another developer's memory is read-only data. If one is wrong or stale, the agent points it out to you, and does not fix it there or copy it.
+- Cross-folder links use `[[dev/name]]`.
+- Only project knowledge goes in: decisions and why, working rules, stack traps.
+- Personal preferences belong in `~/.claude/CLAUDE.md`.
+- Memory changes go in their own commit.
+
+Setup with `/keel:memory`:
+
+- It shows a plan first: your folder name, what moves, the link, CLAUDE.md index imports to remove, settings to fix, and docs that reference old paths.
+- It asks before applying, and applies with a backup.
+- It converts a single shared `.claude/memory/` into your developer folder: every tracked file there moves to `.claude/memory/<you>/` with `git mv`, so history follows, and teammates then see those notes as yours.
+- It moves memories out of an unlinked auto memory directory, subfolders included. A file there that holds a credential, or that it cannot read, blocks the move until you fix it.
+- Only tracked files count as the project's memory. An untracked or ignored folder in `.claude/memory/` does not, and the command refuses to set up a developer folder that git ignores.
+
+The automatic part:
+
+- In a project that already versions memory per developer (tracked files in `.claude/memory/<dev>/`), a new machine gets linked on the first session when your folder name is known (`KEEL_DEV`, or the name you use in your other linked projects) and nothing has to move. Otherwise the session suggests `/keel:memory`.
+- A link to the old single folder, a broken link or an empty folder gets relinked. A link that points anywhere else stays as it is.
+- A project that does not version memory gets only a suggestion, never an automatic folder, so public and third-party repositories stay clean.
+- Declining in `/keel:memory` silences the suggestion for that project. That choice is stored on your machine, not in the repo.
+
+Folder name resolution, in this order:
+
+1. `--dev <name>` given to the command;
+2. the `KEEL_DEV` environment variable;
+3. the folder name you already use in other linked projects;
+4. otherwise, a suggestion from your git user that the command asks you to confirm.
+
+Secret guard: a Write or Edit into `.claude/memory/` or into an auto memory folder (`~/.claude/projects/<project>/memory/`) is refused when the new text contains any of the following, and the agent rewrites the memory without the value:
+
+- a private key;
+- a token in a known format: GitHub, GitLab, AWS, Slack, Stripe, Google API, OpenAI and Anthropic `sk-` keys, npm, SendGrid, JWT;
+- a bearer token, or a random-looking value assigned to a key named like a credential (`apiKey`, `CLIENT_SECRET`, `token`, `password`);
+- a password in a connection URL.
+
+Placeholders such as `<token>`, `${API_KEY}`, `xxxx` and `EXAMPLE` pass, and so does where a secret lives: an env var name (`PAYMENT_API_KEY`) or a secret manager path.
+
+## Recommended configuration (optional)
+
+In `~/.claude/settings.json`, what applies to every project:
 
 ```json
 {
-  "effortLevel": "high",
   "env": { "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000" },
   "worktree": { "bgIsolation": "none" }
 }
 ```
 
-- `effortLevel: high` no topo. Não use `modelSettings` com id de versão; o `/effort` grava assim, apague depois.
-- Compactação em 400 mil, para modelos de 1M de contexto. Medido: o mesmo custo que 300 mil, com menos compactações, e cada compactação perde detalhe.
-- `bgIsolation: none` faz as sessões de fundo trabalharem no checkout. A skill de coordenação conta com isso. Tire se você prefere uma worktree por sessão.
+- Effort: run `/effort high` and confirm with Enter. Claude Code saves the level per model, under `modelSettings` in this file; keep that key, and set it again when a new model ships. A top-level `effortLevel` here no longer counts for Opus 5.5 or newer, which start at `medium` without a saved level. An `effortLevel` in a project's `.claude/settings.json` applies to every model, for everyone in that repo. Do not set `CLAUDE_CODE_EFFORT_LEVEL`: it overrides the `max` the gate asks for in its frontmatter. Claude Code's [model configuration](https://code.claude.com/docs/en/model-config#adjust-effort-level) docs place `high` for work where verification matters, which is what keel leaves in the main session.
+- Compaction at 400k, for models with a 1M context. Measured: the same cost as 300k, with fewer compactions, and each compaction loses detail.
+- `bgIsolation: none` makes background sessions work in the checkout. The coordination skill relies on it. Remove it if you prefer one worktree per session.
 
-O `.claude/settings.json` do projeto deve levar só o que é do projeto.
+The project's `.claude/settings.json` should carry only what belongs to the project.
 
-## Atualizar
+## Updating
 
-Marketplace de terceiros nasce sem atualização automática. Para ligar: `/plugin` → aba Marketplaces → `fluxo` → Enable auto-update. Ligada, o Claude Code atualiza o marketplace e o plugin em segundo plano, alguns minutos depois da primeira mensagem de uma sessão; a sessão aberta segue na versão que carregou.
+A third-party marketplace starts without auto-update. To turn it on: `/plugin` → Marketplaces tab → `keel` → Enable auto-update. Once on, Claude Code updates the marketplace and the plugin in the background, a few minutes after the first message of a session. The open session stays on the version it loaded.
 
-Pelo `~/.claude/settings.json`, o mesmo efeito:
+Through `~/.claude/settings.json`, for the same effect:
 
 ```json
 {
   "extraKnownMarketplaces": {
-    "fluxo": {
-      "source": { "source": "github", "repo": "felipe-diniz/fluxo" },
+    "keel": {
+      "source": { "source": "github", "repo": "felipe-diniz/keel" },
       "autoUpdate": true
     }
   }
 }
 ```
 
-À mão:
+By hand:
 
 ```sh
-claude plugin marketplace update fluxo
-claude plugin update fluxo@fluxo
+claude plugin marketplace update keel
+claude plugin update keel@keel
 ```
 
-Vale na próxima sessão.
+It takes effect in the next session.
 
-## Desinstalar
+## Uninstall
 
 ```sh
-claude plugin uninstall fluxo@fluxo
+claude plugin uninstall keel@keel
 ```
 
-O plugin não escreve nos seus arquivos. Só o `/fluxo:migrar` escreve, e ele deixa backup.
+Only `/keel:migrate` and `/keel:memory` write to your files, and both keep backups. The memory hook can also create your folder and link it on its own, but only in a project that already versions memory and only when nothing has to move; it makes a symlink and never writes settings.
 
-## Limitações conhecidas
+Uninstalling leaves the memory links in place, so auto memory keeps writing to `.claude/memory/<you>/`. If `/keel:memory` fell back to `autoMemoryDirectory` in `.claude/settings.local.json`, that key stays too.
 
-- O `Explore` embutido do Claude Code continua existindo: agente de plugin ganha prefixo e não substitui o embutido. As regras mandam usar o `fluxo:explore`.
-- As regras entram por hook no contexto da sessão principal. Os subagentes têm o próprio prompt e não recebem essas regras; eles leem o `CLAUDE.md` do projeto, menos o `explore` e o `research`.
-- O estilo `fluxo:direto` vence o `outputStyle` do usuário enquanto o plugin estiver habilitado (`force-for-plugin`). Ele vale na sessão principal; os subagentes têm o próprio prompt.
-- O `regras.md` tem de caber em 10.000 caracteres, o limite de saída de hook.
-- Agente de plugin ignora `hooks:` no frontmatter. Por isso o guard de Bash do gate é um hook do plugin que filtra pelo `agent_type` do payload.
+## Known limitations
 
-## Estrutura
+- Claude Code's built-in `Explore` still exists: a plugin agent gets a prefix and does not replace the built-in. The rules tell the session to use `keel:explore`.
+- The rules enter the main session's context through a hook. Subagents have their own prompt and do not receive these rules; they read the project's `CLAUDE.md`, except `explore` and `research`.
+- The `keel:direct` style overrides the user's `outputStyle` while the plugin is enabled (`force-for-plugin`). It applies to the main session; subagents have their own prompt.
+- `rules.md` must fit in 10,000 characters, the hook output limit, with room for the migration notice.
+- A plugin agent ignores `hooks:` in its frontmatter. That is why the gate's Bash guard is a plugin hook that filters on the payload's `agent_type`.
+- The secret guard sees only Write and Edit. A memory written through Bash is not inspected.
+- The memory link relies on symlinks. On Windows without symlink permission, `/keel:memory` falls back to `autoMemoryDirectory`; the hook does not, and only suggests the command.
+
+## Structure
 
 ```
-.claude-plugin/marketplace.json     marketplace (este repo)
-plugins/fluxo/
-  .claude-plugin/plugin.json        nome e versão
-  agents/                           os quatro agentes
-  hooks/hooks.json                  regras (SessionStart), gate e guard (PreToolUse)
-  scripts/                          os hooks e o migrar, em Python sem dependência
-  regras.md                         o que vai ao contexto no início da sessão
-  skills/coordenar-sessoes/         skill, modelos e references
-  output-styles/direto.md           estilo de resposta
-  commands/migrar.md                /fluxo:migrar
+.claude-plugin/marketplace.json       marketplace (this repo)
+plugins/keel/
+  .claude-plugin/plugin.json          name and version
+  agents/                             the four agents
+  hooks/hooks.json                    rules and memory (SessionStart); gate, Bash guard, secret guard (PreToolUse)
+  scripts/                            the hooks and the commands, in Python with no dependencies
+    rules.py                          puts rules.md in context, and the migration notice
+    memory.py                         /keel:memory and the SessionStart memory hook
+    memory-secret-guard.py            refuses credentials written to memory
+    critical-review-gate.py           the gate's briefing and pass count
+    review-bash-guard.py              the read-only Bash inside the gate
+    migrate.py                        /keel:migrate
+  rules.md                            what goes into context at session start
+  skills/coordinate-sessions/         skill, templates and references
+  output-styles/direct.md             response style
+  commands/migrate.md                 /keel:migrate
+  commands/memory.md                  /keel:memory
 ```
 
-Para mudar algo: edite em `plugins/fluxo/`, suba o `version` no `plugin.json` e faça o push. O self-test do guard roda com `python3 plugins/fluxo/scripts/review-bash-guard.py --self-test`.
+To change something: edit it in `plugins/keel/`, bump `version` in `plugin.json` and push. Each script except `rules.py` and `critical-review-gate.py` has a self-test: `python3 plugins/keel/scripts/<script> --self-test`.
 
-## Licença
+## License
 
 [MIT](LICENSE).

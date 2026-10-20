@@ -1,0 +1,12 @@
+{
+  "name": "keel",
+  "version": "3.0.0",
+  "description": "Read, write, research and review agents, a single pre-commit gate only for critical risk, agent memory versioned per developer, and workstreams coordinated in background sessions. Install it and it works.",
+  "author": {
+    "name": "Felipe Diniz"
+  },
+  "homepage": "https://github.com/felipe-diniz/keel",
+  "repository": "https://github.com/felipe-diniz/keel",
+  "license": "MIT",
+  "keywords": ["agents", "code-review", "pre-commit", "memory", "background-sessions", "workflow"]
+}

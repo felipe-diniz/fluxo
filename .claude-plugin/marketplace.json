@@ -1,16 +1,16 @@
 {
-  "name": "fluxo",
+  "name": "keel",
   "owner": {
     "name": "Felipe Diniz"
   },
   "metadata": {
-    "description": "Fluxo de trabalho do Felipe com Claude Code: agentes, gate de pré-commit e coordenação de sessões."
+    "description": "keel: a steady way of working with Claude Code: agents, a pre-commit gate, versioned memory and session coordination."
   },
   "plugins": [
     {
-      "name": "fluxo",
-      "source": "./plugins/fluxo",
-      "description": "Fluxo de trabalho com Claude Code: agentes explore/implement/research/critical-review, gate único de pré-commit só para risco crítico, estilo direto e coordenação de sessões em background."
+      "name": "keel",
+      "source": "./plugins/keel",
+      "description": "explore/implement/research/critical-review agents, a single pre-commit gate only for critical risk, the direct output style, agent memory versioned per developer, and background session coordination."
     }
   ]
 }
