@@ -84,6 +84,9 @@ P=${CLAUDE_SKILL_DIR}/modelos/sessao-de-fundo.settings.json
   Cron só como rede quando o aviso não for possível, de 60 em 60 min, apagado quando a última sessão fecha.
 - **Fechou, pare:** sessão que entregou o relatório final e cujo commit foi conferido sai com `"$C" stop <id>`. Sessão
   fechada que fica `blocked` na lista confunde a próxima coordenadora e a conferência de duplicata.
+- **Frente nova, sessão nova:** nunca mande uma segunda frente a uma sessão que já fechou a dela, nem a reabra por
+  `--resume` para outra frente: ela releria o contexto inteiro da anterior em toda chamada. `--resume` é só para seguir a
+  MESMA frente.
 - **Retomar** continua a mesma conversa; se ela ainda roda, abre uma cópia e avisa. Antes de abrir ou retomar, confira em
   `agents --json` se o dono já não abriu a mesma frente.
 
@@ -97,6 +100,7 @@ P=${CLAUDE_SKILL_DIR}/modelos/sessao-de-fundo.settings.json
 | `prompts/` | a parte da frente de cada sessão (§4) | |
 | `logs/<sessão>/` | o prompt montado e as saídas longas | |
 | `handoff/<sessão>.md` | o HANDOFF que a sessão mantém, para quem retomar | |
+| `handoff/coordenadora.md` | o checkpoint da coordenadora (§9): decisões em curso, próximo passo, sessões vivas com nome e id | ~2 KB |
 
 A coordenadora seguinte lê `fila.md` e `janela.md` — por isso eles têm teto. Ao fechar uma entrega: o diário dela vai
 para `fila-arquivo/`, o `fila.md` fica com o aberto, e a linha de recurso devolvido sai do `janela.md`. Aprovação
@@ -186,8 +190,15 @@ Cada chamada relê o contexto inteiro, o da coordenadora inclusive. O que o ench
 do Bash, mensagens entre sessões e arquivos de estado sem teto.
 
 - **Uma sessão de frente por vez**, salvo pedido do dono; a próxima abre quando a anterior commitou.
-- **Uma coordenadora por entrega:** fechada a entrega (commit e push), o `fila.md` fica com o aberto (§3) e a entrega
-  seguinte abre numa coordenadora nova, que lê o `fila.md`, o `janela.md` e o perfil, não a conversa anterior.
+- **Checkpoint e `/clear` da coordenadora:** no fim de cada rodada (as frentes da vez fecharam, ou rodam com o aviso
+  pedido) e sempre ao fechar uma entrega (commit e push), a coordenadora atualiza `fila.md` e `janela.md` (§3) e o
+  `handoff/coordenadora.md`, e avisa o dono numa linha: "estado salvo; pode dar `/clear` e retomar com
+  `/fluxo:coordenar-sessoes`". O `/clear` é comando do dono: ela não espera por ele para seguir. A sessão de frente não
+  precisa disso: nasce limpa e sai com o `stop` (§2).
+- **Retomar depois do `/clear`** (ou numa coordenadora nova): leia o perfil, `fila.md`, `janela.md` e
+  `handoff/coordenadora.md`, não a conversa anterior; confira as sessões vivas em `agents --json` e renove o
+  `notify_when_idle` de cada uma (o aviso pedido antes do `/clear` pode não chegar); se o nome da coordenadora mudou, avise
+  as ativas.
 - **Mensagem só para recurso, decisão e relatório.** O andamento vai para o HANDOFF; a coordenadora o lê quando precisa.
 - **Saída longa em arquivo** (`$D/logs/<sessão>/`), no contexto só o resumo (`tail -n 5`, o grep da contagem e das
   falhas).
