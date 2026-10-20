@@ -10,7 +10,7 @@
     {
       "name": "fluxo",
       "source": "./plugins/fluxo",
-      "description": "Fluxo de trabalho com Claude Code: agentes Explore/implement/research/critical-review, gate único de pré-commit e coordenação de sessões em background."
+      "description": "Fluxo de trabalho com Claude Code: agentes explore/implement/research/critical-review, gate único de pré-commit só para risco crítico, estilo direto e coordenação de sessões em background."
     }
   ]
 }

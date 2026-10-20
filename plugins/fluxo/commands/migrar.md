@@ -1,6 +1,7 @@
 ---
 description: Remove a instalação manual antiga do fluxo (agentes, hooks, skill, seções do CLAUDE.md) para valer só o plugin
 allowed-tools: Bash(python3 *)
+disable-model-invocation: true
 ---
 
 1. Rode `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/migrar.py"` e mostre o plano ao usuário como veio.

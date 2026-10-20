@@ -52,7 +52,7 @@ Regras do plugin fluxo, carregadas no início de cada sessão. Valem junto com o
 - NÃO acione para: mudança sem domínio crítico; desenho, plano, análise, investigação de bug, validação de fluxo (o principal decide, com `ultrathink` se preciso; leitura ampla vai ao `fluxo:explore`); sessão sem mudança de comportamento (só doc, memória, texto, teste); correção dos achados que ele mesmo apontou; commit já revisado. Nunca em paralelo, nunca relançado no meio da sessão.
 - Depois do relatório, o principal: corrige o que veio (P0 a P3) cobrindo com teste que falha sem a correção; executa os cenários listados com as ferramentas do ambiente; leva ao usuário só o que nenhuma ferramenta alcança, com o porquê.
 - Nova passada só quando o relatório marcar `re-revisão: sim` (P0 cuja correção muda o desenho): escopo = só o delta dessa correção, uma vez, com `RE-REVISÃO P0` na primeira linha do prompt. Fora disso, o hook pede confirmação do usuário a partir da 2ª chamada na sessão.
-- Ele roda no modelo da sessão e em `max` pelo próprio frontmatter: nunca passe `model` nem `effort` na chamada (o hook recusa). Os edits resultantes são aplicados no contexto principal, nunca dentro do subagent.
+- Ele roda no modelo da sessão e em `max` pelo próprio frontmatter: nunca passe `model` nem `effort` na chamada (o hook recusa). Enquanto ele roda, nada de edit nem commit nos arquivos do recorte (ele lê a árvore): espere o veredito. Os edits resultantes são aplicados no contexto principal, nunca dentro do subagent.
 
 # Compact Instructions
 

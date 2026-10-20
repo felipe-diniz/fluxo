@@ -1,6 +1,6 @@
 ---
 name: coordenar-sessoes
-description: Método da sessão COORDENADORA, igual em todo projeto — abrir sessões de verdade do Claude Code em background (`claude --bg`), uma por frente ou fase, em vez de subagentes; montar o prompt de cada uma com o rodapé de regras; conversar por mensagem entre sessões; dividir o que a máquina e a branch têm de um só; levar aprovação e decisão ao dono; retomar sessão parada; e fechar com commit só do que é da sessão (direto ou por índice temporário), prova pelo risco e push só com o sim do dono. O que é do projeto (recursos, prova, push, deploy) está no perfil do projeto (`.claude/coordenacao/` no repo, ou `~/.claude/coordination/<projeto>/perfil/`, ou derivado do CLAUDE.md na primeira vez). Use SEMPRE que o dono pedir para tocar frentes ou fases por sessões, "abrir sessões", "disparar uma sessão", "abrir a próxima fase", coordenar sessões que já rodam, ou retomar sessões paradas.
+description: Método da sessão COORDENADORA — abrir uma sessão `claude --bg` por frente ou fase, montar o prompt com o rodapé de regras, conversar por mensagem, dividir recursos, levar decisões ao dono, retomar sessão parada e fechar com commit só da sessão. Use SEMPRE que o dono pedir para tocar frentes por sessões, "abrir sessões", "disparar uma sessão", "abrir a próxima fase", coordenar as que rodam ou retomar as paradas.
 ---
 
 # Coordenar sessões
@@ -67,8 +67,8 @@ P=${CLAUDE_SKILL_DIR}/modelos/sessao-de-fundo.settings.json
   72 mil para 40 mil tokens ([references/base-de-contexto.md](references/base-de-contexto.md)). As skills do projeto
   ficam. Decisão vai à coordenadora por `SendMessage`.
 - **Modelo e effort são herdados:** nem `--model` nem `--effort`, em frente nenhuma, a de risco crítico inclusive. A
-  sessão nasce no `effortLevel` do `.claude/settings.json` do repo (o top-level do projeto vence o `modelSettings` do
-  usuário). O `max` é só do gate, pelo frontmatter do `fluxo:critical-review`. Profundidade num passo é `ultrathink`. Esta regra
+  sessão nasce no `effortLevel` do topo dos settings (o do `.claude/settings.json` do repo vence o do
+  `~/.claude/settings.json`). O `max` é só do gate, pelo frontmatter do `fluxo:critical-review`. Profundidade num passo é `ultrathink`. Esta regra
   vale pelo arquivo: cópia antiga da skill no contexto (ou preservada por compactação) já mandou `--effort max` e abriu
   quatro frentes em `max` (16/10/2026); antes de lançar, confira o comando aqui.
 - **No checkout, sem worktree para trabalhar** quando o perfil disser (`"worktree": {"bgIsolation": "none"}` no settings

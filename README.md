@@ -153,6 +153,23 @@ O `.claude/settings.json` do projeto deve levar só o que é do projeto.
 
 ## Atualizar
 
+Marketplace de terceiros nasce sem atualização automática. Para ligar: `/plugin` → aba Marketplaces → `fluxo` → Enable auto-update. Ligada, o Claude Code atualiza o marketplace e o plugin em segundo plano, alguns minutos depois da primeira mensagem de uma sessão; a sessão aberta segue na versão que carregou.
+
+Pelo `~/.claude/settings.json`, o mesmo efeito:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "fluxo": {
+      "source": { "source": "github", "repo": "felipe-diniz/fluxo" },
+      "autoUpdate": true
+    }
+  }
+}
+```
+
+À mão:
+
 ```sh
 claude plugin marketplace update fluxo
 claude plugin update fluxo@fluxo

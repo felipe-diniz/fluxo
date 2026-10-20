@@ -44,6 +44,6 @@
     "plugin-authoring": "user-invocable-only",
     "init": "user-invocable-only",
     "security-review": "user-invocable-only",
-    "coordenar-sessoes": "user-invocable-only"
+    "update-config": "user-invocable-only"
   }
 }

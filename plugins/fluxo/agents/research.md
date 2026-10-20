@@ -1,6 +1,6 @@
 ---
 name: research
-description: Use proativamente para PESQUISA WEB ampla: comparar providers/ferramentas, ler documentação externa, levantar preços, capacidades, limites e regras (regulatório, APIs de terceiros). Roda em contexto isolado e devolve uma síntese com fontes, preservando o contexto principal. Diferente do subagent `Explore`, que é só código local (sem web).
+description: Use proativamente para PESQUISA WEB ampla - comparar providers ou ferramentas, ler documentação externa, levantar preços, limites e regras (regulatório, APIs de terceiros). Devolve a síntese com fontes. Código local é do `fluxo:explore`.
 model: sonnet
 effort: high
 omitClaudeMd: true

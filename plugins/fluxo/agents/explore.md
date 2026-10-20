@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Use proativamente para QUALQUER leitura ampla de código ou de docs locais - achar onde algo vive ou quem chama, mapear um fluxo ou módulo, comparar arquivos, inventariar os usos de um símbolo, achar um ponto num doc longo. Lê em contexto isolado e devolve só a síntese com arquivo:linha, preservando o contexto principal. Perguntas independentes vão em vários em paralelo. É a opção padrão para leitura: use no lugar do Explore embutido.
+description: Use proativamente para leitura ampla de código ou de docs locais, no lugar do Explore embutido - achar onde algo vive ou quem chama, mapear um fluxo ou módulo, comparar arquivos, achar um ponto num doc longo. Devolve a síntese com arquivo:linha; perguntas independentes vão em paralelo.
 model: haiku
 effort: medium
 omitClaudeMd: true
@@ -23,4 +23,4 @@ Volta, nesta ordem e sem preâmbulo:
 2. As evidências, com `arquivo:linha` (trecho de até umas 10 linhas só quando ele decide).
 3. O que ficou de fora ou é hipótese.
 
-Não cole arquivos inteiros. Se a tarefa pedir análise de risco ou decisão, diga isso na síntese: quem aprofunda é o contexto principal (o `critical-review` é só o gate do fim, antes do commit).
+Não cole arquivos inteiros. Se a tarefa pedir análise de risco ou decisão, diga isso na síntese: quem aprofunda é o contexto principal (o `fluxo:critical-review` é só o gate do fim, antes do commit).
