@@ -35,12 +35,12 @@ caminhos literais nos comandos seguintes. Nada aqui nomeia projeto; nada no prom
 | O trabalho | Vai para | Por quê |
 |---|---|---|
 | Frente ou fase com commit próprio, horas de trabalho, várias camadas | **sessão `--bg`** | contexto, gate e commit próprios; não engorda a coordenadora |
-| Leitura ampla, mapa de código, "quem chama" | `Explore` (subagente) | a coordenadora só precisa da síntese |
-| Pesquisa web | `research` (subagente) | idem |
+| Leitura ampla, mapa de código, "quem chama" | `fluxo:explore` (subagente) | a coordenadora só precisa da síntese |
+| Pesquisa web | `fluxo:research` (subagente) | idem |
 | Conserto curto (≲ 5 arquivos, um domínio, sem fase de PRD), doc, memória, ajuste da coordenação | **direto na coordenadora**, com o gate no fim se mudar comportamento | uma sessão nova custa a base de contexto, o prompt, as skills e o gate; para pouca coisa é mais caro e mais lento |
 
 Subagente (ferramenta Agent) morre com a resposta, divide o contexto de quem o chamou e não tem gate próprio (o
-`critical-review` é um por sessão): frente nunca vai a subagente. Agent teams (experimental) não isola worktree, não
+`fluxo:critical-review` é um por sessão): frente nunca vai a subagente. Agent teams (experimental) não isola worktree, não
 retoma e custa mais: não substitui sessões `--bg` neste método.
 
 ## 2. Lançar, conversar, retomar, parar
@@ -68,7 +68,7 @@ P=${CLAUDE_SKILL_DIR}/modelos/sessao-de-fundo.settings.json
   ficam. Decisão vai à coordenadora por `SendMessage`.
 - **Modelo e effort são herdados:** nem `--model` nem `--effort`, em frente nenhuma, a de risco crítico inclusive. A
   sessão nasce no `effortLevel` do `.claude/settings.json` do repo (o top-level do projeto vence o `modelSettings` do
-  usuário). O `max` é só do gate, pelo frontmatter do `critical-review`. Profundidade num passo é `ultrathink`. Esta regra
+  usuário). O `max` é só do gate, pelo frontmatter do `fluxo:critical-review`. Profundidade num passo é `ultrathink`. Esta regra
   vale pelo arquivo: cópia antiga da skill no contexto (ou preservada por compactação) já mandou `--effort max` e abriu
   quatro frentes em `max` (16/10/2026); antes de lançar, confira o comando aqui.
 - **No checkout, sem worktree para trabalhar** quando o perfil disser (`"worktree": {"bgIsolation": "none"}` no settings
@@ -176,7 +176,7 @@ O estado do git (branch, `git log`, nada staged no índice compartilhado de quem
 (todo "pronto" se confere pela contagem no log, não se roda de novo), as aprovações do dono contra o que a sessão fez, e
 a lista do deploy do perfil. Produção: só o que o perfil permite, só leitura, só contagem ou id, nunca PII nem secret.
 
-**Gate que morreu no meio:** o hook pede confirmação do dono para a 2ª chamada do `critical-review` na sessão. Se a 1ª
+**Gate que morreu no meio:** o hook pede confirmação do dono para a 2ª chamada do `fluxo:critical-review` na sessão. Se a 1ª
 caiu sem relatório, o dono confirma pelo `attach`, ou autoriza fechar a sessão e abrir outra que segue do HANDOFF e roda
 o gate uma vez. Nunca contornar sem a palavra dele.
 
@@ -193,5 +193,5 @@ do Bash, mensagens entre sessões e arquivos de estado sem teto.
   falhas).
 - **Skill entra pelo núcleo** e só pelas references do tópico; depois de compactar, voltam só os primeiros 20 mil
   caracteres de cada skill invocada, até uns 100 mil no total, e reinvoca-se a que o próximo passo pede.
-- **Ler vai ao `Explore`, escrever o isolável e não crítico ao `implement`;** o risco crítico e a execução das suítes
+- **Ler vai ao `fluxo:explore`, escrever o isolável e não crítico ao `fluxo:implement`;** o risco crítico e a execução das suítes
   ficam na sessão.

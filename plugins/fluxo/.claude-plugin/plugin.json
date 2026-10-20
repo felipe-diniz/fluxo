@@ -1,6 +1,8 @@
 {
   "name": "fluxo",
-  "version": "1.0.0",
-  "description": "Fluxo de trabalho com Claude Code: agentes Explore/implement/research/critical-review, gate único de pré-commit e coordenação de sessões em background.",
-  "author": { "name": "Felipe Diniz" }
+  "version": "2.0.0",
+  "description": "Agentes de leitura, escrita, pesquisa e revisão, gate único de pré-commit e coordenação de frentes em sessões de fundo. Instala e já funciona.",
+  "author": {
+    "name": "Felipe Diniz"
+  }
 }

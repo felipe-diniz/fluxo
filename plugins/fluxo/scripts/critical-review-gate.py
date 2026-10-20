@@ -22,6 +22,11 @@ import unicodedata
 
 AGENT_TOOLS = ("Agent", "Task")
 TARGET = "critical-review"
+
+
+def is_target(subagent_type):
+    # O agente do plugin chega como `fluxo:critical-review`; o nome sem prefixo cobre uma cópia como agente de usuário.
+    return str(subagent_type or "").split(":")[-1] == TARGET
 REQUIRED = (
     ("Pedido", ("pedido", "request")),
     ("Escopo", ("escopo", "scope")),
@@ -92,7 +97,7 @@ def previous_reviews(transcript_path, current_id, current_input):
                     continue
                 if block.get("type") == "tool_use" and block.get("name") in AGENT_TOOLS:
                     tool_input = block.get("input") or {}
-                    if tool_input.get("subagent_type") != TARGET:
+                    if not is_target(tool_input.get("subagent_type")):
                         continue
                     block_id = block.get("id")
                     if current_id and block_id == current_id:
@@ -131,7 +136,7 @@ def main():
     if payload.get("tool_name") not in AGENT_TOOLS:
         return
     tool_input = payload.get("tool_input") or {}
-    if tool_input.get("subagent_type") != TARGET:
+    if not is_target(tool_input.get("subagent_type")):
         if str(tool_input.get("effort") or "").strip().lower() == "max":
             emit("ask", (
                 "effort max é só do critical-review, pelo frontmatter dele; a sessão e os outros subagents ficam no "

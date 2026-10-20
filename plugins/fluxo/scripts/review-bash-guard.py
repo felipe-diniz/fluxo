@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (Bash) escopado ao subagent `critical-review` (registrado no frontmatter do agente).
+"""PreToolUse (Bash) do plugin, que só age dentro do subagent `critical-review` (pelo `agent_type` do payload).
 
 O gate revisa e mede; não altera estado nem dispara trabalho pesado. Este guarda recusa, com o
 motivo, o que a regra do agente proíbe e que já custou caro: git que muda a árvore ou o histórico
@@ -441,6 +441,9 @@ def self_test():
 def main():
     payload = json.load(sys.stdin)
     if payload.get("tool_name") != "Bash":
+        return
+    # Agente de plugin ignora `hooks:` no frontmatter: o hook é do plugin e roda em todo Bash, então filtra aqui.
+    if str(payload.get("agent_type") or "").split(":")[-1] != "critical-review":
         return
     command = (payload.get("tool_input") or {}).get("command") or ""
     reason = decide(command)

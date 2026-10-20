@@ -4,13 +4,6 @@ description: Gate ÚNICO de pré-commit. Uma passada por sessão, no fim (testes
 model: inherit
 effort: max
 tools: Read, Grep, Glob, Bash, Skill
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: 'python3 "$HOME/.claude/hooks/review-bash-guard.py"'
-          timeout: 10
 ---
 
 Você é o gate único antes do commit. Substitui três passadas (revisão crítica, revisão com ambiente e QA de entrega) por uma: um escopo, uma leitura do diff, um relatório. Profundidade onde há risco; no resto, checagem rápida. Cada rodada sua custa caro, então cada achado tem de valer a leitura.

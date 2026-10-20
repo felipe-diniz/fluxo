@@ -22,8 +22,8 @@ O que isto ensina:
   --output-format json --max-turns 1`, somando `input_tokens`, `cache_creation_input_tokens` e
   `cache_read_input_tokens`. O `/context` é estimativa: não viu o Artifact e deu igual com e sem ele.
 - **Subir a janela não resolve a base**: cada chamada passa a reler mais, e a base continua lá. Corta-se a base.
-- **A janela de compactação é a do projeto** (`CLAUDE_CODE_AUTO_COMPACT_WINDOW` no `env` do `.claude/settings.json`, que
-  vence o `autoCompactWindow`). Ela só é lida quando a sessão nasce: quem já roda segue na antiga até ser reaberta.
+- **A janela de compactação vem do `env` dos settings** (`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, global ou do projeto; vence o
+  `autoCompactWindow`). Ela só é lida quando a sessão nasce: quem já roda segue na antiga até ser reaberta.
 - **Memória carregada duas vezes** (o índice importado pelo `CLAUDE.md` com `@` e de novo pela auto memory, quando o
   diretório dela é symlink para o mesmo índice) se corta no projeto, com `autoMemoryEnabled: false` no
   `.claude/settings.local.json` de quem importa: nunca no perfil global, porque no projeto que não importa o índice ele

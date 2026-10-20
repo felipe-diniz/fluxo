@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/regras.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Agent|Task",
@@ -10,14 +21,13 @@
             "timeout": 10
           }
         ]
-      }
-    ],
-    "SessionStart": [
+      },
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/check-setup.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/review-bash-guard.py\"",
             "timeout": 10
           }
         ]

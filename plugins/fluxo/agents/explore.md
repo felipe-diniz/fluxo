@@ -1,6 +1,6 @@
 ---
-name: Explore
-description: Use proativamente para QUALQUER leitura ampla de código ou de docs locais - achar onde algo vive ou quem chama, mapear um fluxo ou módulo, comparar arquivos, inventariar os usos de um símbolo, achar um ponto num doc longo. Lê em contexto isolado e devolve só a síntese com arquivo:linha, preservando o contexto principal. Perguntas independentes vão em vários em paralelo. É a opção padrão para leitura e substitui o Explore embutido.
+name: explore
+description: Use proativamente para QUALQUER leitura ampla de código ou de docs locais - achar onde algo vive ou quem chama, mapear um fluxo ou módulo, comparar arquivos, inventariar os usos de um símbolo, achar um ponto num doc longo. Lê em contexto isolado e devolve só a síntese com arquivo:linha, preservando o contexto principal. Perguntas independentes vão em vários em paralelo. É a opção padrão para leitura: use no lugar do Explore embutido.
 model: haiku
 effort: medium
 omitClaudeMd: true
