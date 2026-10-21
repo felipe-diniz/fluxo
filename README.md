@@ -155,7 +155,7 @@ The session where you run it becomes the coordinator. For each large front, with
 
 A short fix is not a front: it stays in the current session.
 
-Every new front opens a new session. The coordinator never reuses the session of another front. At the end of each round it saves its state to disk and tells you that you can `/clear`. When you run `/keel:coordinate-sessions` again, it rereads the state from disk and picks up the live sessions.
+Every new front opens a new session. The coordinator never reuses the session of another front. At the end of each round it saves its state to disk and tells you that you can `/clear`. When you run `/keel:coordinate-sessions` again, it rereads the state from disk and picks up the live sessions. It also saves its state early, without waiting for the round to end, after an automatic compaction or once three fronts have closed. While a front is running, a 30-minute cron sends the idle coordinator a one-word turn. That keeps its prompt cache warm (1 h in Claude Code), so the call that handles the front's notice does not pay to rewrite the whole context. One miss costs as much as 20 to 80 of these turns.
 
 In an autonomous run, with nobody to `/clear`, the coordinator runs in the background and does a relay at the end of each round: it opens its successor, checks that it is alive and exits. The successor starts from the state on disk and tells the fronts its new name. The questions from every front are settled before the run is released.
 

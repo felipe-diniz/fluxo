@@ -91,7 +91,7 @@ P=${CLAUDE_SKILL_DIR}/templates/background-session.settings.json
 - **Knowing when it ended, without a loop or cron:** when launching, send the session a `SendMessage` with
   `notify_when_idle: true` (the notice arrives once when it goes idle or exits, without spending its tokens, and expires
   in 12 h; renew it when resuming). Cron only as a net when the notice is not possible, every 60 min, deleted when the
-  last session closes.
+  last session closes. The cache keep-alive (§9) is a different cron, with no tool call.
 - **Closed, stop it:** a session that delivered the final report and whose commit was checked exits with `"$C" stop <id>`.
   A closed session that stays `blocked` in the list confuses the next coordinator and the duplicate check.
 - **New front, new session:** never send a second front to a session that already closed its own, nor reopen it by
@@ -221,10 +221,35 @@ messages between sessions and state files with no cap.
   `window.md` (§3) and `handoff/coordinator.md`, and warns the owner in one line: "state saved; you can `/clear` and
   resume with `/keel:coordinate-sessions`". The `/clear` is the owner's command: it does not wait for it to proceed. The
   front session does not need this: it is born clean and exits with the `stop` (§2).
+- **Checkpoint earlier, without waiting for the round:** the cost of every call and of every cache miss grows with the
+  coordinator's context, so it does not wait for the round to close when the context is already heavy. After an
+  automatic compaction, or once three fronts have closed since the last `/clear`, it saves the checkpoint at the next
+  quiet point (no question open with the owner, no gate or commit being checked) and gives the same one-line notice,
+  even with fronts still live. The resume renews each live session's `notify_when_idle` (next bullet), so nothing is
+  lost.
+- **Keeping the coordinator's cache warm while a front runs:** each call reads the whole context from the prompt cache.
+  In Claude Code the cache lives 1 h (5 min when the account is in usage overage), and every read restarts the timer at
+  no extra cost. A front often runs longer than that with the coordinator idle, so the call that handles the front's
+  notice pays a cold rewrite of the whole context: 2× the input price (the 1-hour write). A cache read costs 0.05× on
+  Opus 5.5, 0.1× on most models and 0.025× on Fable 5.1. One miss therefore pays for 20 to 80 keep-alive turns, which is
+  10 to 40 hours at a 30-minute cadence.
+  1. When it launches the first front, the coordinator arms one recurring `CronCreate` with `cron: "13,43 * * * *"`
+     and the prompt `keel keep-alive: reply only "ok", with no tool call.`. Use 30 minutes, not 50 or 60: cron cannot
+     express a 50-minute period, a 60-minute gap leaves no margin over the TTL, and the scheduler shifts each job by a
+     fixed offset.
+  2. The tick runs no tool: each tool call is another full read of the context. A tick that lands while the
+     coordinator is busy waits for idle, and the cache is already warm then.
+  3. The coordinator deletes the cron (`CronDelete`) when the last live front is stopped, before the `/clear` notice,
+     and before the relay of an autonomous run. The successor arms its own when it takes over with fronts live.
+  4. Limits:
+     - in usage overage the TTL drops to 5 min, and the tick no longer prevents the miss (the coordinator cannot see
+       this; accept it);
+     - the cron lives only in the open session and expires after 7 days;
+     - with no live front, there is no cron.
 - **Resuming after the `/clear`** (or in a new coordinator): read the profile, `queue.md`, `window.md` and
   `handoff/coordinator.md`, not the previous conversation; check the live sessions in `agents --json` and renew the
-  `notify_when_idle` of each (the notice requested before the `/clear` may not arrive); if the coordinator's name
-  changed, warn the active ones.
+  `notify_when_idle` of each (the notice requested before the `/clear` may not arrive), arm the cache keep-alive
+  (below) when one is live; if the coordinator's name changed, warn the active ones.
 - **Autonomous run (nobody supervising for hours): relay instead of `/clear`.** The coordinator runs as a background
   session, `<prefix>-coord-<n>`, opened with the same command as the fronts (§2) and the prompt "run the
   keel:coordinate-sessions skill and resume coordination; autonomous run, relay on". In the terminal it could not stop
