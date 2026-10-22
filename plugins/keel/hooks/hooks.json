@@ -12,6 +12,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.py\" --hook",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/coordination-sweep.py\"",
+            "timeout": 20
           }
         ]
       }

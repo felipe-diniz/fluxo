@@ -1,6 +1,6 @@
 {
   "name": "keel",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Read, write, research and review agents, a single pre-commit gate only for critical risk, agent memory versioned per developer, and workstreams coordinated in background sessions. Install it and it works.",
   "author": {
     "name": "Felipe Diniz"

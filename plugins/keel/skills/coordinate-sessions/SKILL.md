@@ -102,19 +102,27 @@ P=${CLAUDE_SKILL_DIR}/templates/background-session.settings.json
 
 ## 3. The coordination state (`$D`)
 
-| Path | What it is | Cap |
-|---|---|---|
-| `queue.md` | **only what is open**: owner decisions and approvals still valid (literal, date, scope), active front, queue, owner pending items, the last line of each closed session (shas) | ~8 KB |
-| `queue-archive/YYYY-MM.md` | the closed diary, moved out of `queue.md` when the delivery closes | never read whole; `grep` |
-| `window.md` | **only the table** of who holds each resource that exists only once, and each one's queue | ~2 KB |
-| `prompts/` | the front part of each session's prompt (§4) | |
-| `logs/<session>/` | the assembled prompt and the long outputs | |
-| `handoff/<session>.md` | the HANDOFF the session maintains, for whoever resumes | |
-| `handoff/coordinator.md` | the coordinator checkpoint (§9): decisions in progress, next step, live sessions with name and id | ~2 KB |
+| Path | What it is | Cap | Removed by the sweep |
+|---|---|---|---|
+| `queue.md` | **only what is open**: owner decisions and approvals still valid (literal, date, scope), active front, queue, owner pending items, the last line of each closed session (shas) | ~8 KB | never |
+| `queue-archive/YYYY-MM.md` | the closed diary, moved out of `queue.md` when the delivery closes | never read whole; `grep` | after 90 days |
+| `window.md` | **only the table** of who holds each resource that exists only once, and each one's queue | ~2 KB | never |
+| `prompts/` | the front part of each session's prompt (§4); `_*.md` are shared blocks | | after 14 days; `_*.md` never |
+| `logs/<session>/` | the assembled prompt and the long outputs, text only | | after 3 days |
+| `handoff/<session>.md` | the HANDOFF the session maintains, for whoever resumes | | after 14 days |
+| `handoff/coordinator.md` | the coordinator checkpoint (§9): decisions in progress, next step, live sessions with name and id | ~2 KB | never |
 
 - If the state directory still has the old Portuguese names (`fila.md`, `fila-arquivo/`, `janela.md`,
   `handoff/coordenadora.md`), rename them with `mv` to `queue.md`, `queue-archive/`, `window.md` and
   `handoff/coordinator.md` before continuing, and tell the owner in one line.
+
+**Cleanup is automatic:** at every session start the plugin's sweep hook removes, in every project's `$D`, what the
+table marks, counted from the entry's last change. What stays at any age: what belongs to a session alive in
+`agents --json` (when the list can't be read, age alone decides), and what `queue.md`, `window.md` or
+`handoff/coordinator.md` cite by path (`logs/<name>`, `prompts/<name>`, `handoff/<name>`). So a tool, evidence or
+generator that an open item still needs is cited by that path in `queue.md`; once the item closes and leaves it, the
+file expires. Nobody deletes state by hand. The hook also removes the safety refs older than 14 days (§6) and prunes the
+worktrees whose directory has been gone for 14 days.
 
 The next coordinator reads `queue.md` and `window.md` — that is why they have a cap. When closing a delivery: its diary
 goes to `queue-archive/`, `queue.md` keeps what is open, and the line of a returned resource leaves `window.md`.
@@ -181,6 +189,9 @@ The coordinator grants and records it in `window.md`.
   Message: the project's commit rule, one line, no body, no trailer, no co-authoring, no amend.
 - **One round of proof per level** (§7): in split mode, what already ran in the tree before the gate is not repeated in
   the worktree, except at level C.
+- **Safety point before a rebase or any history rewrite:** a ref, never a branch:
+  `git update-ref refs/keel/backup/<YYYY-MM-DD>-<what> HEAD`. It does not show in `git branch`, and the sweep removes it
+  after 14 days; delete it earlier with `git update-ref -d` once the result is checked.
 - **The push is the coordinator's, with the owner's yes**, after `git show --stat <sha>` against the report, by the path
   the profile describes (where to push from, hook, remote). Never `--no-verify` without the owner's word. PR, CI, merge
   and deploy: what the profile says; merge and deploy are the owner's.

@@ -58,6 +58,7 @@ Install it and start working. There is no setup step.
 | Hook | Bash guard | Acts only inside `keel:critical-review`: the gate reads and measures, it does not change state. |
 | Hook | rules | At session start and after every compaction, puts the routing, critical-risk, gate and compaction rules in context ([rules.md](plugins/keel/rules.md)). |
 | Hook | memory | At session start, injects the other developers' memory indexes. In a project that already versions memory per developer, it can create your folder and link it when nothing has to move. |
+| Hook | coordination sweep | At session start, removes expired coordination state in `~/.claude/coordination/` (logs after 3 days, handoffs and prompts after 14, the archived diary after 90) and the expired safety refs. Keeps what a live session owns and what the open state cites by path. |
 | Hook | memory secret guard | Refuses a Write or Edit into memory that contains a credential. |
 | Output style | `keel:direct` | Proactive outside critical risk and business rules. Starts with the result, no preamble. A user decision becomes a question with the recommended option first. Comes on with the plugin ([direct.md](plugins/keel/output-styles/direct.md)). |
 | Skill | `/keel:coordinate-sessions` | Coordinates fronts in `claude --bg` sessions. |
@@ -165,7 +166,7 @@ What belongs to each project (ports, commands, commit mode, how to prove) lives 
 2. `~/.claude/coordination/<project>/profile/`: personal;
 3. if neither exists, the skill builds the profile from the `CLAUDE.md`, the risk doc and the project settings, saves it to item 2 and asks only what is missing.
 
-The queue, resource window, prompts and logs stay in `~/.claude/coordination/<project>/`, outside the repo.
+The queue, resource window, prompts and logs stay in `~/.claude/coordination/<project>/`, outside the repo. They clean themselves: at every session start a hook removes logs after 3 days without a change, handoffs and prompts after 14, the closed diary after 90, and the safety refs (`refs/keel/backup/`) after 14. What a live session owns stays, and so does what the queue, the window or the coordinator checkpoint cite by path; those three files always stay. When the list of live sessions can't be read, age alone decides.
 
 ### Versioned memory
 
