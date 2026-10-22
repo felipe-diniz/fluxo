@@ -44,7 +44,8 @@ Install it and start working. There is no setup step.
 
 **Zero setup**
 
-- Install and start. If you had copied the agents, hooks, skill or rules into `~/.claude` by hand, `/keel:migrate` removes those copies so nothing runs twice.
+- Install and start. It keeps itself up to date: the first session turns on background auto-update for its marketplace (`/keel:auto-update off` to opt out).
+- If you had copied the agents, hooks, skill or rules into `~/.claude` by hand, `/keel:migrate` removes those copies so nothing runs twice.
 
 ## What's included
 
@@ -59,10 +60,12 @@ Install it and start working. There is no setup step.
 | Hook | rules | At session start and after every compaction, puts the routing, critical-risk, gate and compaction rules in context ([rules.md](plugins/keel/rules.md)). |
 | Hook | memory | At session start, injects the other developers' memory indexes. In a project that already versions memory per developer, it can create your folder and link it when nothing has to move. |
 | Hook | coordination sweep | At session start, removes expired coordination state in `~/.claude/coordination/` (logs after 3 days, handoffs and prompts after 14, the archived diary after 90) and the expired safety refs. Keeps what a live session owns and what the open state cites by path. |
+| Hook | auto-update | At the first session after the install, turns on background auto-update for keel's marketplace in `~/.claude/settings.json`, with a backup. Respects an explicit `off`, managed settings and the project's settings. |
 | Hook | memory secret guard | Refuses a Write or Edit into memory that contains a credential. |
 | Output style | `keel:direct` | Proactive outside critical risk and business rules. Starts with the result, no preamble. A user decision becomes a question with the recommended option first. Comes on with the plugin ([direct.md](plugins/keel/output-styles/direct.md)). |
 | Skill | `/keel:coordinate-sessions` | Coordinates fronts in `claude --bg` sessions. |
 | Command | `/keel:migrate` | Removes an old manual install and the plugin under its old name (see below). |
+| Command | `/keel:auto-update` | Turns keel's background auto-update on or off, or shows where it stands. A hook turns it on at the first session after the install. |
 | Command | `/keel:memory` | Sets up per-developer versioned memory (see below). |
 
 ## Install
@@ -250,9 +253,11 @@ The project's `.claude/settings.json` should carry only what belongs to the proj
 
 ## Updating
 
-A third-party marketplace starts without auto-update. To turn it on: `/plugin` → Marketplaces tab → `keel` → Enable auto-update. Once on, Claude Code updates the marketplace and the plugin in the background, a few minutes after the first message of a session. The open session stays on the version it loaded.
+A third-party marketplace starts without auto-update, and `marketplace.json` has no field to change that. So keel turns it on by itself: at the first session after the install, a hook writes `"autoUpdate": true` into the marketplace's entry in `~/.claude/settings.json` (with a backup in `~/.claude/backups/`) and says so in one line. From then on Claude Code updates the marketplace and the plugin in the background, a few minutes after the first message of a session. The open session stays on the version it loaded.
 
-Through `~/.claude/settings.json`, for the same effect:
+`/keel:auto-update off` turns it off and stores `false`, which the hook respects from then on; `/keel:auto-update on` turns it back on, and `/keel:auto-update` shows where it stands. A value set by managed settings or by the project's `.claude/settings.json` wins, and the hook leaves it alone. A settings file that is not valid JSON is never rewritten.
+
+The entry it writes, for reference:
 
 ```json
 {

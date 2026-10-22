@@ -17,6 +17,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/coordination-sweep.py\"",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/auto-update.py\" --hook",
+            "timeout": 10
           }
         ]
       }
